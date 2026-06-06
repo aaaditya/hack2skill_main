@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { WellnessInsightRequestSchema } from "@/lib/validations";
 import { buildWellnessPrompt, parseWellnessInsight } from "@/lib/gemini";
 import { GEMINI_MODEL } from "@/lib/constants";
@@ -37,19 +37,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const { moodEntries, journalEntries, examContext } = parsed.data;
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+    const ai = new GoogleGenAI({ apiKey });
 
     const moodSummary = buildMoodSummary(moodEntries);
     const journalSummary = buildJournalSummary(journalEntries);
-    const prompt = buildWellnessPrompt(
-      moodSummary,
-      journalSummary,
-      examContext
-    );
+    const prompt = buildWellnessPrompt(moodSummary, journalSummary, examContext);
 
-    const result = await model.generateContent(prompt);
-    const rawText = result.response.text();
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: prompt,
+    });
+    const rawText = response.text ?? "";
     const insight = parseWellnessInsight(rawText);
 
     return NextResponse.json({ insight }, { status: 200 });

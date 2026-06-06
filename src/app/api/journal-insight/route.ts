@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { JournalInsightRequestSchema } from "@/lib/validations";
 import { buildJournalInsightPrompt, sanitizeString } from "@/lib/gemini";
 import { GEMINI_MODEL } from "@/lib/constants";
@@ -34,15 +34,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const { title, content, examContext } = parsed.data;
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-    const prompt = buildJournalInsightPrompt(
-      title,
-      content,
-      examContext
-    );
-    const result = await model.generateContent(prompt);
-    const rawText = result.response.text();
+    const ai = new GoogleGenAI({ apiKey });
+    const prompt = buildJournalInsightPrompt(title, content, examContext);
+
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: prompt,
+    });
+    const rawText = response.text ?? "";
     const insight = sanitizeString(rawText.trim().split("\n")[0] ?? "");
 
     if (!insight) {

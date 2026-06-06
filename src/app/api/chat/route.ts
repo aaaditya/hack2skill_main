@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { ChatMessageSchema } from "@/lib/validations";
 import { buildChatPrompt, sanitizeString } from "@/lib/gemini";
 import { GEMINI_MODEL } from "@/lib/constants";
@@ -37,8 +37,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const { message, context } = parsed.data;
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+    const ai = new GoogleGenAI({ apiKey });
 
     const triggerLabels = (context?.recentTriggers ?? [])
       .map((t) => t.replace(/_/g, " "))
@@ -53,8 +52,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       : "No additional context available.";
 
     const prompt = buildChatPrompt(message, contextStr);
-    const result = await model.generateContent(prompt);
-    const reply = result.response.text();
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: prompt,
+    });
+    const reply = response.text ?? "";
     const sanitizedReply = sanitizeString(reply.slice(0, 1000));
 
     return NextResponse.json({ reply: sanitizedReply }, { status: 200 });
