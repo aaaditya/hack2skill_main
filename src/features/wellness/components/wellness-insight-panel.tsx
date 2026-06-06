@@ -12,7 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2, Lightbulb, RefreshCw } from "lucide-react";
 import { AiErrorAlert } from "@/components/shared/ai-error-alert";
+import { postJson } from "@/lib/api-client";
 import type { WellnessInsight } from "@/types";
+import { MOOD_SUMMARY_COUNT, JOURNAL_SUMMARY_COUNT } from "@/lib/constants";
 
 export function WellnessInsightPanel() {
   const { state } = useWellnessStore();
@@ -23,31 +25,15 @@ export function WellnessInsightPanel() {
   const fetchInsight = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      const response = await fetch("/api/wellness", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          moodEntries: state.moodEntries.slice(0, 7),
-          journalEntries: state.journalEntries.slice(0, 3),
-          examContext: state.examContext ?? null,
-        }),
+      const data = await postJson<{ insight: WellnessInsight }>("/api/wellness", {
+        moodEntries: state.moodEntries.slice(0, MOOD_SUMMARY_COUNT),
+        journalEntries: state.journalEntries.slice(0, JOURNAL_SUMMARY_COUNT),
+        examContext: state.examContext ?? null,
       });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(
-          (errData as { error?: string }).error ?? "Failed to load insight"
-        );
-      }
-
-      const data = (await response.json()) as { insight: WellnessInsight };
       setInsight(data.insight);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to load wellness insight."
-      );
+      setError(err instanceof Error ? err.message : "Unable to load wellness insight.");
     } finally {
       setIsLoading(false);
     }

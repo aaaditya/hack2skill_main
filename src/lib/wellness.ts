@@ -19,6 +19,10 @@ import {
   EXAM_CRITICAL_DAYS,
   EXAM_SOON_DAYS,
   EXAM_URGENCY_ANXIETY_THRESHOLD,
+  SCORE_WEIGHT_MOOD,
+  SCORE_WEIGHT_ENERGY,
+  SCORE_WEIGHT_CALM,
+  SCORE_WEIGHT_JOURNAL,
 } from "@/lib/constants";
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -79,6 +83,11 @@ function escalateRiskLevel(
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+/**
+ * Computes the composite wellness score (0–100) from recent mood and journal data.
+ * Weights: Mood 35%, Energy 25%, Calm (inverted anxiety) 25%, Journal activity 15%.
+ * Only considers entries from the last 7 days.
+ */
 export function calculateWellnessScore(
   moodEntries: MoodEntry[],
   journalEntries: JournalEntry[]
@@ -106,10 +115,10 @@ export function calculateWellnessScore(
     recentMood.length === 0
       ? 0
       : Math.round(
-          (moodAverage / 5) * 35 +
-            (energyAverage / 5) * 25 +
-            (invertedAnxiety / 5) * 25 +
-            (journalFrequency / 100) * 15
+          (moodAverage / 5) * SCORE_WEIGHT_MOOD +
+            (energyAverage / 5) * SCORE_WEIGHT_ENERGY +
+            (invertedAnxiety / 5) * SCORE_WEIGHT_CALM +
+            (journalFrequency / 100) * SCORE_WEIGHT_JOURNAL
         );
 
   return {
@@ -122,6 +131,11 @@ export function calculateWellnessScore(
   };
 }
 
+/**
+ * Derives exam readiness classification from wellness scores and exam proximity.
+ * Escalates risk when exam is critically close (≤3 days) AND anxiety is high,
+ * or when exam is soon (≤14 days) AND mood is declining or anxiety is high.
+ */
 export function calculateExamReadiness(
   wellnessScore: WellnessScore | null,
   moodEntries: MoodEntry[],

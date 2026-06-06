@@ -42,6 +42,11 @@ This is the result-season — a distinct high-anxiety period.
 - Suggest healthy ways to occupy the waiting period`;
 }
 
+/**
+ * Builds the Gemini prompt for periodic wellness insight generation.
+ * Phase-aware: switches from revision advice to result-season support
+ * when examContext.phase === "awaiting_results".
+ */
 export function buildWellnessPrompt(
   moodSummary: string,
   journalSummary: string,
@@ -95,6 +100,10 @@ Respond with this exact JSON structure (no markdown, no backticks):
 }`;
 }
 
+/**
+ * Builds the Gemini prompt for the real-time exam prep chat coach.
+ * Context string must include exam type, phase, mood, and active triggers.
+ */
 export function buildChatPrompt(userMessage: string, context: string): string {
   return `${EXAM_WELLNESS_SYSTEM_PROMPT}
 
@@ -160,6 +169,10 @@ function isWellnessInsightShape(value: unknown): value is {
   );
 }
 
+/**
+ * Strips HTML, removes dangerous chars, and caps length.
+ * Applied to all AI response strings before storage or display.
+ */
 export function sanitizeString(input: unknown): string {
   if (typeof input !== "string") return "";
   return input

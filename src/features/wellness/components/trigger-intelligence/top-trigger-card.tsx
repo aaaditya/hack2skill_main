@@ -55,8 +55,7 @@ export function TopTriggerCard({ topTrigger, trend }: TopTriggerCardProps) {
   }
 
   const colors = EXAM_TRIGGER_COLORS[topTrigger.trigger];
-  const trendData = trend;
-  const TrendIconComp = trendData ? TREND_ICON[trendData.direction] : null;
+  const TrendIconComp = trend ? TREND_ICON[trend.direction] : null;
 
   return (
     <Card
@@ -77,13 +76,13 @@ export function TopTriggerCard({ topTrigger, trend }: TopTriggerCardProps) {
           >
             {EXAM_TRIGGER_LABELS[topTrigger.trigger]}
           </span>
-          {TrendIconComp && trendData && (
+          {TrendIconComp && trend && (
             <span
-              className={`flex items-center gap-1 text-xs font-medium ${TREND_COLOR[trendData.direction]}`}
-              aria-label={TREND_LABEL[trendData.direction]}
+              className={`flex items-center gap-1 text-xs font-medium ${TREND_COLOR[trend.direction]}`}
+              aria-label={TREND_LABEL[trend.direction]}
             >
               <TrendIconComp className="h-3.5 w-3.5" aria-hidden="true" />
-              {TREND_LABEL[trendData.direction]}
+              {TREND_LABEL[trend.direction]}
             </span>
           )}
         </div>

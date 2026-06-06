@@ -16,13 +16,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Send, Bot, User, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { postJson } from "@/lib/api-client";
+import { INPUT_FOCUS_DELAY_MS, MAX_CHAT_REPLY_LENGTH } from "@/lib/constants";
 import type { ChatMessage } from "@/types";
 
 const ChatInputSchema = z.object({
   message: z
     .string()
     .min(1, "Message cannot be empty")
-    .max(1000, "Message must be under 1000 characters")
+    .max(MAX_CHAT_REPLY_LENGTH, `Message must be under ${MAX_CHAT_REPLY_LENGTH} characters`)
     .refine(
       (val) => !/\b(ignore previous|system prompt|jailbreak|bypass)\b/i.test(val),
       "Invalid message content"
@@ -112,29 +114,16 @@ export function WellnessChat() {
       setIsLoading(true);
 
       try {
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: data.message,
-            context: getContext(),
-          }),
+        const result = await postJson<{ reply: string }>("/api/chat", {
+          message: data.message,
+          context: getContext(),
         });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(
-            (errData as { error?: string }).error ?? "Chat unavailable"
-          );
-        }
-
-        const result = (await response.json()) as { reply: string };
         addChatMessage({ role: "assistant", content: result.reply });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       } finally {
         setIsLoading(false);
-        setTimeout(() => inputRef.current?.focus(), 100);
+        setTimeout(() => inputRef.current?.focus(), INPUT_FOCUS_DELAY_MS);
       }
     },
     [addChatMessage, getContext, reset]

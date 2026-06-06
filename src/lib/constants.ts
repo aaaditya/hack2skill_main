@@ -78,3 +78,20 @@ export const MIN_ENTRIES_FOR_ANALYSIS = 2;
 export const STRESSFUL_MOOD_THRESHOLD = 2;
 export const TREND_CHANGE_THRESHOLD = 0.5;
 export const JOURNAL_FREQUENCY_MULTIPLIER = 20;
+
+// ─── Exam types (ordered for display) ────────────────────────────────────────
+
+export const EXAM_TYPES = [
+  "NEET",
+  "JEE",
+  "CUET",
+  "CAT",
+  "GATE",
+  "UPSC",
+  "Class 12 Boards",
+  "Class 10 Boards",
+  "Other",
+] as const satisfies readonly string[];
+
+/** Exam names shown as informational badges (excludes "Other") */
+export const EXAM_DISPLAY_BADGES = EXAM_TYPES.filter((e) => e !== "Other");

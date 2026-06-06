@@ -16,9 +16,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { getMoodLabel, getAnxietyLabel } from "@/lib/wellness";
 import { TriggerPicker } from "@/components/shared/trigger-picker";
+import { SubmissionSuccessCard } from "@/components/shared/submission-success-card";
+import { SUCCESS_DISPLAY_MS } from "@/lib/constants";
+import { toggleTriggerValue } from "@/lib/form-utils";
 
 const MOOD_EMOJI: Record<MoodLevel, string> = {
   1: "😞",
@@ -125,11 +128,9 @@ export function MoodTrackerForm() {
 
   const toggleTrigger = useCallback(
     (trigger: ExamStressTrigger) => {
-      const current = selectedTriggers ?? [];
-      const next = current.includes(trigger)
-        ? current.filter((t) => t !== trigger)
-        : [...current, trigger];
-      setValue("triggers", next, { shouldValidate: true });
+      setValue("triggers", toggleTriggerValue(selectedTriggers ?? [], trigger), {
+        shouldValidate: true,
+      });
     },
     [selectedTriggers, setValue]
   );
@@ -141,7 +142,7 @@ export function MoodTrackerForm() {
       setTimeout(() => {
         setSubmitted(false);
         reset();
-      }, 2000);
+      }, SUCCESS_DISPLAY_MS);
     },
     [addMoodEntry, reset]
   );
@@ -152,20 +153,10 @@ export function MoodTrackerForm() {
 
   if (submitted) {
     return (
-      <Card
-        className="border-green-200 bg-green-50"
-        role="status"
-        aria-live="polite"
-      >
-        <CardContent className="flex flex-col items-center gap-3 py-12">
-          <CheckCircle className="h-12 w-12 text-green-600" aria-hidden="true" />
-          <h2 className="text-lg font-semibold text-green-800">Check-in saved!</h2>
-          <p className="text-sm text-green-700">
-            Your mood has been recorded. Head to the dashboard to see your exam
-            readiness trends.
-          </p>
-        </CardContent>
-      </Card>
+      <SubmissionSuccessCard
+        heading="Check-in saved!"
+        message="Your mood has been recorded. Head to the dashboard to see your exam readiness trends."
+      />
     );
   }
 

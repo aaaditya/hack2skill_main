@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Brain, BookOpen, MessageCircle, BarChart3, ArrowRight, GraduationCap } from "lucide-react";
 
-const EXAM_BADGES = ["NEET", "JEE", "CUET", "CAT", "GATE", "UPSC", "Class 12 Boards", "Class 10 Boards"];
+import { EXAM_DISPLAY_BADGES } from "@/lib/constants";
 
 const FEATURES = [
   {
@@ -79,7 +79,7 @@ export default function HomePage() {
           className="flex flex-wrap items-center justify-center gap-2"
           aria-label="Supported exams"
         >
-          {EXAM_BADGES.map((exam) => (
+          {EXAM_DISPLAY_BADGES.map((exam) => (
             <span
               key={exam}
               className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary"

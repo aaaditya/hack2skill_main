@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { EXAM_TRIGGER_LABELS, EXAM_TRIGGER_COLORS } from "@/lib/wellness";
 import { TrendingUp, TrendingDown, Minus, ArrowUpDown } from "lucide-react";
+import { MAX_VISIBLE_TRENDS } from "@/lib/constants";
 
 interface TriggerTrendListProps {
   trends: TriggerTrend[];
@@ -45,7 +46,7 @@ export function TriggerTrendList({ trends, frequencies }: TriggerTrendListProps)
   const visible = trends
     .filter((t) => t.recentCount > 0 || t.olderCount > 0)
     .sort((a, b) => b.recentCount - a.recentCount)
-    .slice(0, 5);
+    .slice(0, MAX_VISIBLE_TRENDS);
 
   if (visible.length === 0) {
     return (

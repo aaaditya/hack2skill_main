@@ -1,5 +1,5 @@
 /**
- * Typed client-side helper for JSON POST requests to internal API routes.
+ * Typed client-side helpers for JSON POST requests to internal API routes.
  * Eliminates duplicated fetch/error-cast boilerplate across AI panels.
  */
 
@@ -23,7 +23,7 @@ export async function postJson<TResponse>(
   });
 
   if (!response.ok) {
-    const errData = await response.json().catch(() => ({})) as ApiErrorResponse;
+    const errData = (await response.json().catch(() => ({}))) as ApiErrorResponse;
     throw new Error(errData.error ?? `Request failed (${response.status})`);
   }
 

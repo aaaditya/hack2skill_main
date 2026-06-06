@@ -3,6 +3,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useWellnessStore } from "@/features/wellness/hooks/use-wellness-store";
 import { buildTriggerAnalysis, shouldActivateResultsAnxietyMode } from "@/lib/trigger-analysis";
+import { postJson } from "@/lib/api-client";
+import { TOP_TRIGGERS_COUNT } from "@/lib/constants";
 import {
   Card,
   CardContent,
@@ -62,7 +64,7 @@ const STATIC_COPING_RECOMMENDATIONS: Array<{
     icon: Star,
     title: "Write a letter to your past self",
     description:
-      "The version of you who started this preparation could never have imagined how far you have come. Recognise your growth, not just your score.",
+      "The version of you who started this preparation could never have imagined how far you have come. Recognize your growth, not just your score.",
   },
   {
     icon: Shield,
@@ -172,7 +174,7 @@ function FutureSelfPanel({
                   id="ai-guidance-heading"
                   className="text-sm font-semibold mb-2"
                 >
-                  Personalised guidance
+                  Personalized guidance
                 </h4>
                 <ul className="space-y-2">
                   {guidance.specializedGuidance.map((tip, i) => (
@@ -251,38 +253,16 @@ export function ResultsAnxietyMode() {
   const fetchGuidance = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      const response = await fetch("/api/results-anxiety", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          examContext: state.examContext ?? null,
-          recentMoodLevel: state.moodEntries[0]?.moodLevel,
-          topTriggers: analysis.frequencies
-            .slice(0, 5)
-            .map((f) => f.trigger),
-          daysUntilExam: state.examContext?.daysUntilExam,
-        }),
+      const data = await postJson<{ guidance: ResultsAnxietyGuidance }>("/api/results-anxiety", {
+        examContext: state.examContext ?? null,
+        recentMoodLevel: state.moodEntries[0]?.moodLevel,
+        topTriggers: analysis.frequencies.slice(0, TOP_TRIGGERS_COUNT).map((f) => f.trigger),
+        daysUntilExam: state.examContext?.daysUntilExam,
       });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(
-          (errData as { error?: string }).error ?? "Service unavailable"
-        );
-      }
-
-      const data = (await response.json()) as {
-        guidance: ResultsAnxietyGuidance;
-      };
       setGuidance(data.guidance);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to generate message. Please try again."
-      );
+      setError(err instanceof Error ? err.message : "Unable to generate message. Please try again.");
     } finally {
       setIsLoading(false);
     }

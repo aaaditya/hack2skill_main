@@ -16,15 +16,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { TriggerPicker } from "@/components/shared/trigger-picker";import { CheckCircle, Loader2, Sparkles } from "lucide-react";
+import { TriggerPicker } from "@/components/shared/trigger-picker";
+import { postJson } from "@/lib/api-client";
+import { SUCCESS_DISPLAY_MS } from "@/lib/constants";
+import { SubmissionSuccessCard } from "@/components/shared/submission-success-card";
+import { toggleTriggerValue } from "@/lib/form-utils";
+import { Loader2, Sparkles } from "lucide-react";
+import { getMoodLabel } from "@/lib/wellness";
 
-const MOOD_OPTIONS: Array<{ value: MoodLevel; label: string; emoji: string }> = [
-  { value: 1, label: "Very Low", emoji: "😞" },
-  { value: 2, label: "Low", emoji: "😕" },
-  { value: 3, label: "Moderate", emoji: "😐" },
-  { value: 4, label: "Good", emoji: "🙂" },
-  { value: 5, label: "Excellent", emoji: "😄" },
-];
+const MOOD_EMOJIS: Record<MoodLevel, string> = {
+  1: "😞",
+  2: "😕",
+  3: "😐",
+  4: "🙂",
+  5: "😄",
+};
+
+const MOOD_LEVELS = [1, 2, 3, 4, 5] as const satisfies readonly MoodLevel[];
 
 const REFLECTION_PROMPTS = [
   "What study topic challenged me the most today and why?",
@@ -64,11 +72,9 @@ export function JournalEntryForm() {
 
   const toggleTrigger = useCallback(
     (trigger: ExamStressTrigger) => {
-      const current = selectedTriggers ?? [];
-      const next = current.includes(trigger)
-        ? current.filter((t) => t !== trigger)
-        : [...current, trigger];
-      setValue("triggers", next, { shouldValidate: true });
+      setValue("triggers", toggleTriggerValue(selectedTriggers ?? [], trigger), {
+        shouldValidate: true,
+      });
     },
     [selectedTriggers, setValue]
   );
@@ -95,21 +101,15 @@ export function JournalEntryForm() {
       setSubmitted(true);
 
       // Fire background AI insight — does not block the success state
-      void fetch("/api/journal-insight", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: data.title,
-          content: data.content,
-          mood: data.mood,
-          triggers: data.triggers,
-          examContext: state.examContext ?? null,
-        }),
+      void postJson<{ insight: string }>("/api/journal-insight", {
+        title: data.title,
+        content: data.content,
+        mood: data.mood,
+        triggers: data.triggers,
+        examContext: state.examContext ?? null,
       })
-        .then((res) => (res.ok ? res.json() : Promise.reject()))
-        .then((result: unknown) => {
-          const insight = (result as { insight?: string }).insight;
-          if (insight) updateJournalInsight(entryId, insight);
+        .then((result) => {
+          if (result.insight) updateJournalInsight(entryId, result.insight);
         })
         .catch(() => {
           // Insight is optional — silently ignore API failures
@@ -118,7 +118,7 @@ export function JournalEntryForm() {
       setTimeout(() => {
         setSubmitted(false);
         reset();
-      }, 2500);
+      }, SUCCESS_DISPLAY_MS);
     },
     [addJournalEntry, updateJournalInsight, reset, state.examContext]
   );
@@ -127,25 +127,10 @@ export function JournalEntryForm() {
 
   if (submitted) {
     return (
-      <Card
-        className="border-green-200 bg-green-50"
-        role="status"
-        aria-live="polite"
-      >
-        <CardContent className="flex flex-col items-center gap-3 py-12">
-          <CheckCircle
-            className="h-12 w-12 text-green-600"
-            aria-hidden="true"
-          />
-          <h2 className="text-lg font-semibold text-green-800">
-            Journal entry saved!
-          </h2>
-          <p className="text-sm text-green-700">
-            Great job reflecting. Visit your dashboard for exam-focused AI
-            insights.
-          </p>
-        </CardContent>
-      </Card>
+      <SubmissionSuccessCard
+        heading="Journal entry saved!"
+        message="Great job reflecting. Visit your dashboard for exam-focused AI insights."
+      />
     );
   }
 
@@ -254,29 +239,29 @@ export function JournalEntryForm() {
               How are you feeling about your preparation?
             </legend>
             <div className="flex gap-2 flex-wrap" role="group">
-              {MOOD_OPTIONS.map((opt) => (
+              {MOOD_LEVELS.map((level) => (
                 <button
-                  key={opt.value}
+                  key={level}
                   type="button"
                   onClick={() =>
-                    setValue("mood", opt.value, { shouldValidate: true })
+                    setValue("mood", level, { shouldValidate: true })
                   }
-                  aria-pressed={moodValue === opt.value}
-                  aria-label={`Mood: ${opt.label}`}
+                  aria-pressed={moodValue === level}
+                  aria-label={`Mood: ${getMoodLabel(level)}`}
                   className={`
                     flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all min-w-[56px]
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
                     ${
-                      moodValue === opt.value
+                      moodValue === level
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border hover:border-primary/50 hover:bg-accent"
                     }
                   `}
                 >
                   <span className="text-xl" aria-hidden="true">
-                    {opt.emoji}
+                    {MOOD_EMOJIS[level]}
                   </span>
-                  <span className="text-xs">{opt.label}</span>
+                  <span className="text-xs">{getMoodLabel(level)}</span>
                 </button>
               ))}
             </div>

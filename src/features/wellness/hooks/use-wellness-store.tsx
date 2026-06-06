@@ -123,6 +123,10 @@ const initialState: WellnessState = {
   isLoaded: false,
 };
 
+/**
+ * Pure reducer for all wellness state mutations.
+ * Exported for direct use in unit tests without mounting the provider.
+ */
 export function wellnessReducer(
   state: WellnessState,
   action: WellnessAction

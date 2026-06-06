@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Brain, RefreshCw } from "lucide-react";
 import { AiErrorAlert } from "@/components/shared/ai-error-alert";
 import { buildTriggerSummaryForAI } from "@/lib/trigger-analysis";
+import { postJson } from "@/lib/api-client";
 
 interface RootCauseSummaryProps {
   analysis: TriggerAnalysis;
@@ -30,33 +31,17 @@ export function RootCauseSummary({
   const fetchRootCause = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
     try {
       const triggerSummary = buildTriggerSummaryForAI(analysis);
-      const response = await fetch("/api/trigger-analysis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          moodEntries: [],
-          journalEntries: [],
-          examContext: examContext ?? null,
-          triggerSummary,
-        }),
+      const data = await postJson<{ rootCause: WellnessInsight }>("/api/trigger-analysis", {
+        moodEntries: [],
+        journalEntries: [],
+        examContext: examContext ?? null,
+        triggerSummary,
       });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(
-          (errData as { error?: string }).error ?? "Analysis unavailable"
-        );
-      }
-
-      const data = (await response.json()) as { rootCause: WellnessInsight };
       setRootCause(data.rootCause);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to generate analysis."
-      );
+      setError(err instanceof Error ? err.message : "Unable to generate analysis.");
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +85,7 @@ export function RootCauseSummary({
           size="sm"
           className="w-full"
           aria-label={
-            rootCause ? "Regenerate root cause summary" : "Analyse root cause"
+            rootCause ? "Regenerate root cause summary" : "Analyze root cause"
           }
         >
           {isLoading ? (
@@ -109,7 +94,7 @@ export function RootCauseSummary({
                 className="h-4 w-4 animate-spin"
                 aria-hidden="true"
               />
-              <span>Analysing patterns...</span>
+              <span>Analyzing patterns...</span>
             </>
           ) : rootCause ? (
             <>
@@ -117,7 +102,7 @@ export function RootCauseSummary({
               <span>Regenerate</span>
             </>
           ) : (
-            "Analyse Root Cause"
+            "Analyze Root Cause"
           )}
         </Button>
       </CardContent>

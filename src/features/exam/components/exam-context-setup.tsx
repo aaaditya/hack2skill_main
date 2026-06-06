@@ -17,19 +17,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GraduationCap, Pencil, BookOpen, Clock } from "lucide-react";
+import { DEFAULT_DAYS_UNTIL_EXAM, MAX_DAYS_UNTIL_EXAM, EXAM_TYPES } from "@/lib/constants";
 import { formatDaysUntilExam } from "@/lib/wellness";
 
-const EXAM_TYPES: ExamType[] = [
-  "NEET",
-  "JEE",
-  "CUET",
-  "CAT",
-  "GATE",
-  "UPSC",
-  "Class 12 Boards",
-  "Class 10 Boards",
-  "Other",
-];
 
 const EXAM_DESCRIPTIONS: Record<ExamType, string> = {
   NEET: "Medical entrance",
@@ -81,7 +71,7 @@ export function ExamContextSetup({ compact = false }: ExamContextSetupProps) {
     resolver: zodResolver(ExamContextSchema),
     defaultValues: {
       examType: examContext?.examType ?? "NEET",
-      daysUntilExam: examContext?.daysUntilExam ?? 90,
+      daysUntilExam: examContext?.daysUntilExam ?? DEFAULT_DAYS_UNTIL_EXAM,
       phase: examContext?.phase ?? "preparing",
     },
   });
@@ -237,7 +227,7 @@ export function ExamContextSetup({ compact = false }: ExamContextSetupProps) {
                   id="daysUntilExam"
                   type="number"
                   min={0}
-                  max={730}
+                  max={MAX_DAYS_UNTIL_EXAM}
                   className="w-32"
                   aria-describedby={
                     errors.daysUntilExam ? "days-error" : "days-hint"
