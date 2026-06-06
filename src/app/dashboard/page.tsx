@@ -4,22 +4,24 @@ import { WellnessScoreCard } from "@/features/wellness/components/wellness-score
 import { WellnessInsightPanel } from "@/features/wellness/components/wellness-insight-panel";
 import { StressTriggerChart } from "@/features/wellness/components/stress-trigger-chart";
 import { ExamContextSetup } from "@/features/exam/components/exam-context-setup";
+import { TriggerIntelligence } from "@/features/wellness/components/trigger-intelligence";
+import { ResultsAnxietyMode } from "@/features/wellness/components/results-anxiety-mode";
 import { Separator } from "@/components/ui/separator";
 
 export const metadata: Metadata = {
   title: "Dashboard — MindfulU",
   description:
-    "View your exam readiness, wellness score, stress trigger patterns, and AI-powered insights.",
+    "View your exam readiness, wellness score, stress trigger intelligence, and AI-powered insights.",
 };
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground mt-1">
-          Your exam preparation wellness overview — readiness, trends, and
-          AI-powered insights.
+          Your exam preparation wellness overview — readiness, trigger patterns,
+          and AI-powered insights.
         </p>
       </div>
 
@@ -30,9 +32,15 @@ export default function DashboardPage() {
         <WellnessScoreCard />
       </div>
 
-      <StressTriggerChart />
+      <Separator />
+
+      <TriggerIntelligence />
 
       <Separator />
+
+      <ResultsAnxietyMode />
+
+      <StressTriggerChart />
 
       <section aria-labelledby="insights-heading">
         <h2 id="insights-heading" className="text-xl font-semibold mb-4">

@@ -1,0 +1,90 @@
+import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { TriggerAnalysisRequestSchema } from "@/lib/validations";
+import { parseWellnessInsight } from "@/lib/gemini";
+import type { ExamContext } from "@/types";
+
+export const runtime = "nodejs";
+export const maxDuration = 30;
+
+const ROOT_CAUSE_SYSTEM_PROMPT = `You are an exam preparation wellness analyst. You read data summaries about a student's stress trigger patterns and produce a single, concise root cause explanation.
+
+RULES:
+- Respond with ONLY a JSON object — no markdown, no preamble
+- The root cause must be 2-3 warm, non-clinical sentences
+- Name the specific exam trigger patterns visible in the data
+- Explain the likely psychological chain (e.g. poor mock score → fear of failure → revision pressure spikes)
+- End with one brief encouraging observation
+- Do not diagnose, prescribe, or use clinical language
+- Do not generate code or off-topic content`;
+
+function buildRootCausePrompt(
+  triggerSummary: string,
+  examContext: ExamContext | null | undefined
+): string {
+  const examLine = examContext
+    ? `Exam: ${examContext.examType}, ${examContext.daysUntilExam} days remaining.`
+    : "No specific exam set.";
+
+  return `${ROOT_CAUSE_SYSTEM_PROMPT}
+
+${examLine}
+
+Trigger data:
+${triggerSummary}
+
+Respond with exactly this JSON:
+{
+  "summary": "2-3 sentence root cause explanation",
+  "suggestions": ["one exam-specific coping tip"],
+  "triggers": ["the dominant trigger pattern identified"],
+  "positives": ["one encouraging observation from the data"]
+}`;
+}
+
+export async function POST(request: NextRequest) {
+  const apiKey = process.env["GEMINI_API_KEY"];
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: "Analysis service is temporarily unavailable." },
+      { status: 503 }
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  const parsed = TriggerAnalysisRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed.", details: parsed.error.flatten() },
+      { status: 422 }
+    );
+  }
+
+  const { triggerSummary, examContext } = parsed.data;
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const prompt = buildRootCausePrompt(
+      triggerSummary,
+      examContext as ExamContext | null | undefined
+    );
+    const result = await model.generateContent(prompt);
+    const rawText = result.response.text();
+    const insight = parseWellnessInsight(rawText);
+
+    return NextResponse.json({ rootCause: insight }, { status: 200 });
+  } catch (err) {
+    console.error("[trigger-analysis API]", err);
+    return NextResponse.json(
+      { error: "Failed to generate root cause analysis. Please try again." },
+      { status: 500 }
+    );
+  }
+}

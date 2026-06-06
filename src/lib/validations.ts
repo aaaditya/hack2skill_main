@@ -132,3 +132,39 @@ export type JournalEntryInput = z.infer<typeof JournalEntrySchema>;
 export type ChatMessageInput = z.infer<typeof ChatMessageSchema>;
 export type WellnessInsightRequest = z.infer<typeof WellnessInsightRequestSchema>;
 export type ExamContextInput = z.infer<typeof ExamContextSchema>;
+
+// ─── Trigger Analysis & Results Anxiety ──────────────────────────────────────
+
+const MoodEntrySnapshotSchema = z.object({
+  moodLevel: MoodLevelSchema,
+  energyLevel: MoodLevelSchema,
+  anxietyLevel: MoodLevelSchema,
+  notes: z.string().max(MAX_NOTES_LENGTH),
+  triggers: z.array(ExamStressTriggerSchema),
+  timestamp: z.string(),
+});
+
+const JournalEntrySnapshotSchema = z.object({
+  title: z.string().max(MAX_TITLE_LENGTH),
+  content: z.string().max(MAX_CONTENT_LENGTH),
+  mood: MoodLevelSchema,
+  triggers: z.array(ExamStressTriggerSchema),
+  timestamp: z.string(),
+});
+
+export const TriggerAnalysisRequestSchema = z.object({
+  moodEntries: z.array(MoodEntrySnapshotSchema).max(30),
+  journalEntries: z.array(JournalEntrySnapshotSchema).max(10),
+  examContext: ExamContextSchema.nullable().optional(),
+  triggerSummary: z.string().max(800),
+});
+
+export const ResultsAnxietyRequestSchema = z.object({
+  examContext: ExamContextSchema.nullable().optional(),
+  recentMoodLevel: MoodLevelSchema.optional(),
+  topTriggers: z.array(ExamStressTriggerSchema).max(8).optional(),
+  daysUntilExam: z.number().int().min(0).max(730).optional(),
+});
+
+export type TriggerAnalysisRequest = z.infer<typeof TriggerAnalysisRequestSchema>;
+export type ResultsAnxietyRequest = z.infer<typeof ResultsAnxietyRequestSchema>;

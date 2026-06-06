@@ -90,3 +90,46 @@ export interface WellnessSession {
   chatHistory: ChatMessage[];
   examContext: ExamContext | null;
 }
+
+// ─── Trigger Intelligence ─────────────────────────────────────────────────────
+
+export type TriggerTrendDirection = "increasing" | "decreasing" | "stable";
+
+export interface TriggerFrequency {
+  trigger: ExamStressTrigger;
+  totalCount: number;
+  stressfulCount: number;
+  stressfulPercent: number;
+  totalPercent: number;
+}
+
+export interface TriggerTrend {
+  trigger: ExamStressTrigger;
+  direction: TriggerTrendDirection;
+  recentCount: number;
+  olderCount: number;
+  changePercent: number;
+}
+
+export interface TriggerInsightLine {
+  trigger: ExamStressTrigger;
+  sentence: string;
+}
+
+export interface TriggerAnalysis {
+  topTrigger: TriggerFrequency | null;
+  frequencies: TriggerFrequency[];
+  trends: TriggerTrend[];
+  insightLines: TriggerInsightLine[];
+  totalEntries: number;
+  stressfulEntries: number;
+  hasEnoughData: boolean;
+}
+
+// ─── Results Anxiety Mode ─────────────────────────────────────────────────────
+
+export interface ResultsAnxietyGuidance {
+  futureSelfMessage: string;
+  specializedGuidance: string[];
+}
+
