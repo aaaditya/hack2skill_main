@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ChatMessageSchema } from "@/lib/validations";
-import { buildChatPrompt } from "@/lib/gemini";
+import { buildChatPrompt, sanitizeString } from "@/lib/gemini";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     const prompt = buildChatPrompt(message, contextStr);
     const result = await model.generateContent(prompt);
     const reply = result.response.text();
-    const sanitizedReply = reply.replace(/<[^>]*>/g, "").slice(0, 1000);
+    const sanitizedReply = sanitizeString(reply.slice(0, 1000));
 
     return NextResponse.json({ reply: sanitizedReply }, { status: 200 });
   } catch (err) {

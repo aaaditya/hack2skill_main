@@ -149,26 +149,35 @@ export function ExamReadinessCard() {
           </div>
 
           <div className="rounded-lg bg-white/60 border border-border/50 p-3 space-y-0.5">
-            <dt className="text-xs text-muted-foreground font-medium">
-              Days Remaining
-            </dt>
-            <dd
-              className={`text-lg font-bold ${
-                daysRemaining <= 7
-                  ? "text-red-600"
-                  : daysRemaining <= 30
-                  ? "text-orange-600"
-                  : "text-foreground"
-              }`}
-              aria-label={`${daysRemaining} days remaining`}
-            >
-              {daysRemaining === 0 ? "Today!" : daysRemaining}
-              {daysRemaining > 0 && (
-                <span className="text-xs text-muted-foreground font-normal ml-1">
-                  days
-                </span>
-              )}
-            </dd>
+            {state.examContext?.phase === "awaiting_results" ? (
+              <>
+                <dt className="text-xs text-muted-foreground font-medium">Phase</dt>
+                <dd className="text-sm font-bold text-rose-600">Awaiting Results</dd>
+              </>
+            ) : (
+              <>
+                <dt className="text-xs text-muted-foreground font-medium">
+                  Days Until Exam
+                </dt>
+                <dd
+                  className={`text-lg font-bold ${
+                    daysRemaining <= 7
+                      ? "text-red-600"
+                      : daysRemaining <= 30
+                      ? "text-orange-600"
+                      : "text-foreground"
+                  }`}
+                  aria-label={`${daysRemaining} days remaining`}
+                >
+                  {daysRemaining === 0 ? "Today!" : daysRemaining}
+                  {daysRemaining > 0 && (
+                    <span className="text-xs text-muted-foreground font-normal ml-1">
+                      days
+                    </span>
+                  )}
+                </dd>
+              </>
+            )}
           </div>
 
           <div className="rounded-lg bg-white/60 border border-border/50 p-3 space-y-0.5">

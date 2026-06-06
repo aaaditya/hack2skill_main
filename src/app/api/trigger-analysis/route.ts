@@ -22,13 +22,21 @@ function buildRootCausePrompt(
   triggerSummary: string,
   examContext: ExamContext | null | undefined
 ): string {
+  const isAwaiting = examContext?.phase === "awaiting_results";
+
   const examLine = examContext
-    ? `Exam: ${examContext.examType}, ${examContext.daysUntilExam} days remaining.`
+    ? isAwaiting
+      ? `Exam: ${examContext.examType}. Phase: awaiting results (exam is done).`
+      : `Exam: ${examContext.examType}, ${examContext.daysUntilExam} days remaining.`
     : "No specific exam set.";
+
+  const phaseNote = isAwaiting
+    ? "\nNOTE: The student is awaiting results. Focus the root cause on result anxiety and waiting-period stress, NOT on revision or study preparation."
+    : "";
 
   return `${ROOT_CAUSE_SYSTEM_PROMPT}
 
-${examLine}
+${examLine}${phaseNote}
 
 Trigger data:
 ${triggerSummary}

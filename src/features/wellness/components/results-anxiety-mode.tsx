@@ -17,11 +17,11 @@ import {
   Star,
   Loader2,
   RefreshCw,
-  AlertCircle,
   Shield,
   Lightbulb,
   User,
 } from "lucide-react";
+import { AiErrorAlert } from "@/components/shared/ai-error-alert";
 import type { ResultsAnxietyGuidance } from "@/types";
 
 const WORTH_REMINDER = `Your value as a person has nothing to do with a number on a result sheet.
@@ -156,19 +156,7 @@ function FutureSelfPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error && (
-          <div
-            className="flex items-start gap-2 rounded-md bg-destructive/10 border border-destructive/20 p-3"
-            role="alert"
-            aria-live="assertive"
-          >
-            <AlertCircle
-              className="h-4 w-4 text-destructive shrink-0 mt-0.5"
-              aria-hidden="true"
-            />
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        )}
+        {error && <AiErrorAlert message={error} />}
 
         {guidance && !isLoading && (
           <div className="space-y-4" aria-live="polite">

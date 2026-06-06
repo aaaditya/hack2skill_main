@@ -19,7 +19,14 @@ import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types";
 
 const ChatInputSchema = z.object({
-  message: z.string().min(1).max(1000),
+  message: z
+    .string()
+    .min(1, "Message cannot be empty")
+    .max(1000, "Message must be under 1000 characters")
+    .refine(
+      (val) => !/\b(ignore previous|system prompt|jailbreak|bypass)\b/i.test(val),
+      "Invalid message content"
+    ),
 });
 
 type ChatInputForm = z.infer<typeof ChatInputSchema>;

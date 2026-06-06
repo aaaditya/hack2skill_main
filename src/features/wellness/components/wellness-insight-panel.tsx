@@ -10,7 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Lightbulb, RefreshCw, AlertCircle } from "lucide-react";
+import { Loader2, Lightbulb, RefreshCw } from "lucide-react";
+import { AiErrorAlert } from "@/components/shared/ai-error-alert";
 import type { WellnessInsight } from "@/types";
 
 export function WellnessInsightPanel() {
@@ -77,19 +78,7 @@ export function WellnessInsightPanel() {
           </p>
         )}
 
-        {error && (
-          <div
-            className="flex items-start gap-2 rounded-md bg-destructive/10 border border-destructive/20 p-3"
-            role="alert"
-            aria-live="assertive"
-          >
-            <AlertCircle
-              className="h-4 w-4 text-destructive shrink-0 mt-0.5"
-              aria-hidden="true"
-            />
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        )}
+        {error && <AiErrorAlert message={error} />}
 
         {insight && !isLoading && (
           <div className="space-y-4" aria-live="polite">

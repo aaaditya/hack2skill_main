@@ -16,8 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { EXAM_TRIGGER_LABELS } from "@/lib/wellness";
-import { CheckCircle, Loader2, Sparkles } from "lucide-react";
+import { TriggerPicker } from "@/components/shared/trigger-picker";import { CheckCircle, Loader2, Sparkles } from "lucide-react";
 
 const MOOD_OPTIONS: Array<{ value: MoodLevel; label: string; emoji: string }> = [
   { value: 1, label: "Very Low", emoji: "😞" },
@@ -26,8 +25,6 @@ const MOOD_OPTIONS: Array<{ value: MoodLevel; label: string; emoji: string }> = 
   { value: 4, label: "Good", emoji: "🙂" },
   { value: 5, label: "Excellent", emoji: "😄" },
 ];
-
-const EXAM_TRIGGERS = Object.keys(EXAM_TRIGGER_LABELS) as ExamStressTrigger[];
 
 const REFLECTION_PROMPTS = [
   "What study topic challenged me the most today and why?",
@@ -295,31 +292,11 @@ export function JournalEntryForm() {
                 (optional)
               </span>
             </p>
-            <div
-              className="flex flex-wrap gap-2"
-              role="group"
-              aria-labelledby="journal-triggers-label"
-            >
-              {EXAM_TRIGGERS.map((trigger) => (
-                <button
-                  key={trigger}
-                  type="button"
-                  onClick={() => toggleTrigger(trigger)}
-                  aria-pressed={selectedTriggers?.includes(trigger) ?? false}
-                  className={`
-                    rounded-full px-3 py-1 text-sm border-2 transition-all
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-                    ${
-                      selectedTriggers?.includes(trigger)
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border hover:border-primary/50"
-                    }
-                  `}
-                >
-                  {EXAM_TRIGGER_LABELS[trigger]}
-                </button>
-              ))}
-            </div>
+            <TriggerPicker
+              selected={selectedTriggers ?? []}
+              onToggle={toggleTrigger}
+              labelId="journal-triggers-label"
+            />
           </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>

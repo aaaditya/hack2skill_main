@@ -17,7 +17,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CheckCircle, Loader2 } from "lucide-react";
-import { getMoodLabel, getAnxietyLabel, EXAM_TRIGGER_LABELS } from "@/lib/wellness";
+import { getMoodLabel, getAnxietyLabel } from "@/lib/wellness";
+import { TriggerPicker } from "@/components/shared/trigger-picker";
 
 const MOOD_EMOJI: Record<MoodLevel, string> = {
   1: "😞",
@@ -34,8 +35,6 @@ const ENERGY_EMOJI: Record<MoodLevel, string> = {
   4: "🌟",
   5: "🚀",
 };
-
-const EXAM_TRIGGERS = Object.keys(EXAM_TRIGGER_LABELS) as ExamStressTrigger[];
 
 interface MoodScaleProps {
   id: string;
@@ -236,41 +235,13 @@ export function MoodTrackerForm() {
                 (optional — select all that apply)
               </span>
             </p>
-            <div
-              className="flex flex-wrap gap-2"
-              role="group"
-              aria-labelledby="triggers-label"
-              aria-describedby={errors.triggers ? "triggers-error" : undefined}
-            >
-              {EXAM_TRIGGERS.map((trigger) => (
-                <button
-                  key={trigger}
-                  type="button"
-                  onClick={() => toggleTrigger(trigger)}
-                  aria-pressed={selectedTriggers?.includes(trigger) ?? false}
-                  className={`
-                    rounded-full px-3 py-1 text-sm border-2 transition-all
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-                    ${
-                      selectedTriggers?.includes(trigger)
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border hover:border-primary/50"
-                    }
-                  `}
-                >
-                  {EXAM_TRIGGER_LABELS[trigger]}
-                </button>
-              ))}
-            </div>
-            {errors.triggers && (
-              <p
-                id="triggers-error"
-                className="mt-1 text-xs text-destructive"
-                role="alert"
-              >
-                {errors.triggers.message}
-              </p>
-            )}
+            <TriggerPicker
+              selected={selectedTriggers ?? []}
+              onToggle={toggleTrigger}
+              labelId="triggers-label"
+              errorId="triggers-error"
+              error={errors.triggers?.message}
+            />
           </div>
 
           <div>

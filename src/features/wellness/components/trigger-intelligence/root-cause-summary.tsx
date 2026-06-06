@@ -10,7 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Brain, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, Brain, RefreshCw } from "lucide-react";
+import { AiErrorAlert } from "@/components/shared/ai-error-alert";
 import { buildTriggerSummaryForAI } from "@/lib/trigger-analysis";
 
 interface RootCauseSummaryProps {
@@ -77,19 +78,7 @@ export function RootCauseSummary({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error && (
-          <div
-            className="flex items-start gap-2 rounded-md bg-destructive/10 border border-destructive/20 p-3"
-            role="alert"
-            aria-live="assertive"
-          >
-            <AlertCircle
-              className="h-4 w-4 text-destructive shrink-0 mt-0.5"
-              aria-hidden="true"
-            />
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        )}
+        {error && <AiErrorAlert message={error} />}
 
         {rootCause && !isLoading && (
           <div className="space-y-3" aria-live="polite">
