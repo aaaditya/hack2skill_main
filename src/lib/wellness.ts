@@ -7,12 +7,21 @@ import type {
   ExamReadiness,
   RiskLevel,
 } from "@/types";
+import {
+  MS_PER_DAY,
+  RECENT_DAYS,
+  JOURNAL_FREQUENCY_MULTIPLIER,
+  ANXIETY_INVERSION_BASE,
+  TREND_DELTA_THRESHOLD,
+  RISK_THRESHOLD_LOW,
+  RISK_THRESHOLD_MODERATE,
+  RISK_THRESHOLD_HIGH,
+  EXAM_CRITICAL_DAYS,
+  EXAM_SOON_DAYS,
+  EXAM_URGENCY_ANXIETY_THRESHOLD,
+} from "@/lib/constants";
 
-const RECENT_DAYS = 7;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const ANXIETY_INVERSION_BASE = 6;
-const JOURNAL_FREQUENCY_MULTIPLIER = 20;
-const MAX_JOURNAL_FREQUENCY = 1;
+// ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function average(values: number[]): number {
   if (values.length === 0) return 0;
@@ -37,17 +46,38 @@ function calculateTrend(
   );
 
   const midpoint = Math.floor(sorted.length / 2);
-  const firstHalf = sorted.slice(0, midpoint);
-  const secondHalf = sorted.slice(midpoint);
-
-  const firstAvg = average(firstHalf.map((e) => e.moodLevel));
-  const secondAvg = average(secondHalf.map((e) => e.moodLevel));
+  const firstAvg = average(sorted.slice(0, midpoint).map((e) => e.moodLevel));
+  const secondAvg = average(sorted.slice(midpoint).map((e) => e.moodLevel));
   const delta = secondAvg - firstAvg;
 
-  if (delta > 0.3) return "improving";
-  if (delta < -0.3) return "declining";
+  if (delta > TREND_DELTA_THRESHOLD) return "improving";
+  if (delta < -TREND_DELTA_THRESHOLD) return "declining";
   return "stable";
 }
+
+/**
+ * Escalates a base risk level based on exam proximity and current anxiety.
+ */
+function escalateRiskLevel(
+  base: RiskLevel,
+  days: number | null,
+  anxietyAvg: number,
+  trend: WellnessScore["trend"]
+): RiskLevel {
+  if (days === null) return base;
+
+  const isCriticallyClose = days <= EXAM_CRITICAL_DAYS;
+  const isExamSoon = days <= EXAM_SOON_DAYS;
+  const isHighAnxiety = anxietyAvg >= EXAM_URGENCY_ANXIETY_THRESHOLD;
+  const isDeclining = trend === "declining";
+
+  if (isCriticallyClose && isHighAnxiety && base !== "critical") return "critical";
+  if (isExamSoon && isDeclining && base === "low") return "moderate";
+  if (isExamSoon && isHighAnxiety && base === "low") return "moderate";
+  return base;
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export function calculateWellnessScore(
   moodEntries: MoodEntry[],
@@ -56,20 +86,20 @@ export function calculateWellnessScore(
   const recentMood = getRecentEntries(moodEntries, RECENT_DAYS);
   const recentJournal = getRecentEntries(journalEntries, RECENT_DAYS);
 
-  const moodAverage =
-    recentMood.length > 0 ? average(recentMood.map((e) => e.moodLevel)) : 0;
-
-  const energyAverage =
-    recentMood.length > 0 ? average(recentMood.map((e) => e.energyLevel)) : 0;
-
-  const anxietyAverage =
-    recentMood.length > 0 ? average(recentMood.map((e) => e.anxietyLevel)) : 0;
+  const moodAverage = recentMood.length > 0
+    ? average(recentMood.map((e) => e.moodLevel))
+    : 0;
+  const energyAverage = recentMood.length > 0
+    ? average(recentMood.map((e) => e.energyLevel))
+    : 0;
+  const anxietyAverage = recentMood.length > 0
+    ? average(recentMood.map((e) => e.anxietyLevel))
+    : 0;
 
   const invertedAnxiety = ANXIETY_INVERSION_BASE - anxietyAverage;
-
   const journalFrequency = Math.min(
     recentJournal.length * JOURNAL_FREQUENCY_MULTIPLIER,
-    MAX_JOURNAL_FREQUENCY * 100
+    100
   );
 
   const overall =
@@ -82,22 +112,16 @@ export function calculateWellnessScore(
             (journalFrequency / 100) * 15
         );
 
-  const trend = calculateTrend(recentMood);
-
   return {
     overall: Math.min(100, Math.max(0, overall)),
     moodAverage: Math.round(moodAverage * 10) / 10,
     energyAverage: Math.round(energyAverage * 10) / 10,
     anxietyAverage: Math.round(anxietyAverage * 10) / 10,
     journalFrequency: Math.round(journalFrequency),
-    trend,
+    trend: calculateTrend(recentMood),
   };
 }
 
-/**
- * Derives exam readiness risk level from wellness score + exam proximity.
- * High anxiety near exam date escalates the risk classification.
- */
 export function calculateExamReadiness(
   wellnessScore: WellnessScore | null,
   moodEntries: MoodEntry[],
@@ -108,7 +132,6 @@ export function calculateExamReadiness(
   const overall = wellnessScore?.overall ?? 0;
   const anxietyAvg = wellnessScore?.anxietyAverage ?? 0;
 
-  // Count dominant trigger across all entries
   const triggerCounts: Partial<Record<ExamStressTrigger, number>> = {};
   for (const entry of [...moodEntries, ...journalEntries]) {
     for (const t of entry.triggers) {
@@ -117,39 +140,19 @@ export function calculateExamReadiness(
   }
 
   const sorted = Object.entries(triggerCounts).sort(([, a], [, b]) => b - a);
-  const dominantTrigger =
-    sorted.length > 0 ? (sorted[0]?.[0] as ExamStressTrigger) : null;
+  const dominantTrigger = sorted.length > 0
+    ? (sorted[0]?.[0] as ExamStressTrigger)
+    : null;
 
-  // Base risk from wellness score
-  let riskLevel: RiskLevel;
-  if (overall === 0) {
-    riskLevel = "low"; // no data yet
-  } else if (overall >= 70) {
-    riskLevel = "low";
-  } else if (overall >= 50) {
-    riskLevel = "moderate";
-  } else if (overall >= 30) {
-    riskLevel = "high";
-  } else {
-    riskLevel = "critical";
-  }
+  let baseRisk: RiskLevel;
+  if (overall === 0) baseRisk = "low";
+  else if (overall >= RISK_THRESHOLD_LOW) baseRisk = "low";
+  else if (overall >= RISK_THRESHOLD_MODERATE) baseRisk = "moderate";
+  else if (overall >= RISK_THRESHOLD_HIGH) baseRisk = "high";
+  else baseRisk = "critical";
 
-  // Escalate based on proximity to exam + high anxiety
   const days = examContext?.daysUntilExam ?? null;
-  if (days !== null) {
-    const isExamSoon = days <= 14;
-    const isCriticallyClose = days <= 3;
-    const isHighAnxiety = anxietyAvg >= 3.5;
-    const isDeclining = trend === "declining";
-
-    if (isCriticallyClose && isHighAnxiety && riskLevel !== "critical") {
-      riskLevel = "critical";
-    } else if (isExamSoon && isDeclining && riskLevel === "low") {
-      riskLevel = "moderate";
-    } else if (isExamSoon && isHighAnxiety && riskLevel === "low") {
-      riskLevel = "moderate";
-    }
-  }
+  const riskLevel = escalateRiskLevel(baseRisk, days, anxietyAvg, trend);
 
   const riskLabels: Record<RiskLevel, string> = {
     low: "On Track",
@@ -231,7 +234,6 @@ export function generateId(): string {
 export function formatDaysUntilExam(days: number): string {
   if (days === 0) return "Today";
   if (days === 1) return "Tomorrow";
-  if (days <= 7) return `${days} days`;
   if (days <= 30) return `${days} days`;
   const weeks = Math.floor(days / 7);
   const remaining = days % 7;

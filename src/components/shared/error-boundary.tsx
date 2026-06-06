@@ -29,7 +29,9 @@ export class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    console.error("[ErrorBoundary]", error, info.componentStack);
+    if (process.env.NODE_ENV === "development") {
+      console.error("[ErrorBoundary]", error, info.componentStack);
+    }
   }
 
   private handleReset = (): void => {

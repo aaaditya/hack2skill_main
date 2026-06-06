@@ -9,13 +9,16 @@ import type {
   TriggerAnalysis,
 } from "@/types";
 import { EXAM_TRIGGER_LABELS } from "@/lib/wellness";
-
-const STRESSFUL_MOOD_THRESHOLD = 2;
-const RECENT_WINDOW_DAYS = 7;
-const COMPARISON_WINDOW_DAYS = 14;
-const MIN_ENTRIES_FOR_ANALYSIS = 2;
-const TREND_CHANGE_THRESHOLD = 0.5;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+import {
+  MS_PER_DAY,
+  RECENT_DAYS as RECENT_WINDOW_DAYS,
+  COMPARISON_WINDOW_DAYS,
+  MIN_ENTRIES_FOR_ANALYSIS,
+  TREND_CHANGE_THRESHOLD,
+  STRESSFUL_MOOD_THRESHOLD,
+  MAX_INSIGHT_LINES,
+  TOP_TRIGGER_SUMMARY_COUNT,
+} from "@/lib/constants";
 
 // ─── Entry helpers ────────────────────────────────────────────────────────────
 
@@ -146,7 +149,7 @@ export function generateInsightLines(
 ): TriggerInsightLine[] {
   return frequencies
     .filter((f) => f.totalCount > 0)
-    .slice(0, 3)
+    .slice(0, MAX_INSIGHT_LINES)
     .map((f) => {
       const label = EXAM_TRIGGER_LABELS[f.trigger];
       let sentence: string;
@@ -218,7 +221,7 @@ export function buildTriggerSummaryForAI(analysis: TriggerAnalysis): string {
     `Low-mood entries: ${analysis.stressfulEntries}`,
   ];
 
-  for (const f of analysis.frequencies.slice(0, 5)) {
+  for (const f of analysis.frequencies.slice(0, TOP_TRIGGER_SUMMARY_COUNT)) {
     lines.push(
       `${EXAM_TRIGGER_LABELS[f.trigger]}: ${f.totalCount} occurrences, ` +
         `${f.stressfulCount} in low-mood entries (${f.stressfulPercent}%)`

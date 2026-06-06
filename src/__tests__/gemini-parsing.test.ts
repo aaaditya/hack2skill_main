@@ -1,4 +1,4 @@
-import { parseWellnessInsight, extractTextFromGeminiResponse } from "@/lib/gemini";
+import { parseWellnessInsight } from "@/lib/gemini";
 
 describe("parseWellnessInsight", () => {
   it("parses a valid JSON response", () => {
@@ -94,39 +94,5 @@ describe("parseWellnessInsight", () => {
     expect(result.suggestions).toHaveLength(0);
     expect(result.triggers).toHaveLength(0);
     expect(result.positives).toHaveLength(0);
-  });
-});
-
-describe("extractTextFromGeminiResponse", () => {
-  it("extracts text from a valid response", () => {
-    const response = {
-      candidates: [
-        {
-          content: {
-            parts: [{ text: "Hello, how can I help you?" }],
-          },
-        },
-      ],
-    };
-
-    expect(extractTextFromGeminiResponse(response)).toBe(
-      "Hello, how can I help you?"
-    );
-  });
-
-  it("throws when no candidates are present", () => {
-    const response = { candidates: [] };
-    expect(() => extractTextFromGeminiResponse(response)).toThrow(
-      "No candidate in Gemini response"
-    );
-  });
-
-  it("throws when parts array is empty", () => {
-    const response = {
-      candidates: [{ content: { parts: [] } }],
-    };
-    expect(() => extractTextFromGeminiResponse(response)).toThrow(
-      "No parts in Gemini response"
-    );
   });
 });

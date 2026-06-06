@@ -9,7 +9,6 @@ import React, {
   useReducer,
   useRef,
 } from "react";
-import { z } from "zod";
 import type {
   MoodEntry,
   JournalEntry,
@@ -17,7 +16,21 @@ import type {
   WellnessScore,
   ExamContext,
 } from "@/types";
+import { z } from "zod";
 import { calculateWellnessScore, generateId } from "@/lib/wellness";
+import {
+  ExamStressTriggerSchema,
+  ExamTypeSchema,
+  ExamPhaseSchema,
+  MoodLevelSchema,
+} from "@/lib/validations";
+import {
+  MAX_MOOD_ENTRIES,
+  MAX_JOURNAL_ENTRIES,
+  MAX_CHAT_MESSAGES,
+  PERSIST_DEBOUNCE_MS,
+  MAX_DAYS_UNTIL_EXAM,
+} from "@/lib/constants";
 
 interface WellnessState {
   moodEntries: MoodEntry[];
@@ -50,44 +63,56 @@ interface WellnessContextValue {
 }
 
 const STORAGE_KEY = "mindfulu_wellness_data";
-const PERSIST_DEBOUNCE_MS = 500;
 
-// ─── Zod schema for localStorage shape validation ────────────────────────────
-// Lenient — uses .passthrough() so unknown future fields do not break hydration.
-const StoredStateSchema = z
-  .object({
-    moodEntries: z.array(
-      z.object({
-        id: z.string(),
-        timestamp: z.string(),
-        moodLevel: z.number().int().min(1).max(5),
-        energyLevel: z.number().int().min(1).max(5),
-        anxietyLevel: z.number().int().min(1).max(5),
-        notes: z.string(),
-        triggers: z.array(z.string()),
-      }).passthrough()
-    ),
-    journalEntries: z.array(
-      z.object({
-        id: z.string(),
-        timestamp: z.string(),
-        title: z.string(),
-        content: z.string(),
-        mood: z.number().int().min(1).max(5),
-        triggers: z.array(z.string()),
-      }).passthrough()
-    ),
-    chatHistory: z.array(
-      z.object({
-        role: z.enum(["user", "assistant"]),
-        content: z.string(),
-        timestamp: z.string(),
-      })
-    ),
-    wellnessScore: z.object({}).passthrough().nullable().optional(),
-    examContext: z.object({}).passthrough().nullable().optional(),
-  })
-  .passthrough();
+// ─── Strongly-typed localStorage schema ──────────────────────────────────────
+// .passthrough() allows unknown future fields without breaking hydration.
+const StoredMoodEntrySchema = z.object({
+  id: z.string(),
+  timestamp: z.string(),
+  moodLevel: MoodLevelSchema,
+  energyLevel: MoodLevelSchema,
+  anxietyLevel: MoodLevelSchema,
+  notes: z.string(),
+  triggers: z.array(ExamStressTriggerSchema),
+}).passthrough();
+
+const StoredJournalEntrySchema = z.object({
+  id: z.string(),
+  timestamp: z.string(),
+  title: z.string(),
+  content: z.string(),
+  mood: MoodLevelSchema,
+  triggers: z.array(ExamStressTriggerSchema),
+  aiInsight: z.string().optional(),
+}).passthrough();
+
+const StoredExamContextSchema = z.object({
+  examType: ExamTypeSchema,
+  daysUntilExam: z.number().int().min(0).max(MAX_DAYS_UNTIL_EXAM),
+  phase: ExamPhaseSchema,
+}).passthrough();
+
+type StoredState = {
+  moodEntries: MoodEntry[];
+  journalEntries: JournalEntry[];
+  chatHistory: ChatMessage[];
+  wellnessScore: WellnessScore | null;
+  examContext: ExamContext | null;
+};
+
+const StoredStateSchema = z.object({
+  moodEntries: z.array(StoredMoodEntrySchema),
+  journalEntries: z.array(StoredJournalEntrySchema),
+  chatHistory: z.array(
+    z.object({
+      role: z.enum(["user", "assistant"]),
+      content: z.string(),
+      timestamp: z.string(),
+    })
+  ),
+  wellnessScore: z.object({}).passthrough().nullable().optional(),
+  examContext: StoredExamContextSchema.nullable().optional(),
+}).passthrough();
 
 const initialState: WellnessState = {
   moodEntries: [],
@@ -104,17 +129,17 @@ export function wellnessReducer(
 ): WellnessState {
   switch (action.type) {
     case "ADD_MOOD_ENTRY": {
-      const moodEntries = [action.payload, ...state.moodEntries].slice(0, 90);
+      const moodEntries = [action.payload, ...state.moodEntries].slice(0, MAX_MOOD_ENTRIES);
       const wellnessScore = calculateWellnessScore(moodEntries, state.journalEntries);
       return { ...state, moodEntries, wellnessScore };
     }
     case "ADD_JOURNAL_ENTRY": {
-      const journalEntries = [action.payload, ...state.journalEntries].slice(0, 50);
+      const journalEntries = [action.payload, ...state.journalEntries].slice(0, MAX_JOURNAL_ENTRIES);
       const wellnessScore = calculateWellnessScore(state.moodEntries, journalEntries);
       return { ...state, journalEntries, wellnessScore };
     }
     case "ADD_CHAT_MESSAGE": {
-      const chatHistory = [...state.chatHistory, action.payload].slice(-50);
+      const chatHistory = [...state.chatHistory, action.payload].slice(-MAX_CHAT_MESSAGES);
       return { ...state, chatHistory };
     }
     case "SET_EXAM_CONTEXT":
@@ -157,10 +182,8 @@ export function WellnessProvider({ children }: { children: React.ReactNode }) {
       if (stored) {
         const parsed = StoredStateSchema.safeParse(JSON.parse(stored));
         if (parsed.success) {
-          dispatch({
-            type: "HYDRATE",
-            payload: parsed.data as unknown as Omit<WellnessState, "isLoaded">,
-          });
+          const data = parsed.data as StoredState;
+          dispatch({ type: "HYDRATE", payload: data });
           return;
         }
       }

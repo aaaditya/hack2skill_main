@@ -1,4 +1,5 @@
-import type { WellnessInsight, ExamContext, ExamPhase } from "@/types";
+import type { WellnessInsight, ExamContext, ExamPhase, ExamType } from "@/types";
+import { JOURNAL_INSIGHT_CONTENT_PREVIEW } from "@/lib/constants";
 
 const EXAM_WELLNESS_SYSTEM_PROMPT = `You are a compassionate exam preparation wellness coach for students in India. Your role is to:
 1. Analyze mood patterns and exam-specific stress triggers
@@ -20,19 +21,16 @@ const BOARD_EXAM_GUIDANCE = {
     "Class 12 board exams carry enormous weight — stream choices, college admissions, and family expectations all converge. Acknowledge the pressure of practicals, ISA assessments, and the finality this exam feels like.",
   "Class 10 Boards":
     "Class 10 boards are the first high-stakes milestone. Students face stream-choice anxiety on top of exam pressure. Emphasize that this moment is one step, not a definition.",
-} as const;
+} as const satisfies Partial<Record<ExamType, string>>;
 
-interface GeminiAPIResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{ text: string }>;
-    };
-  }>;
+type BoardExamType = keyof typeof BOARD_EXAM_GUIDANCE;
+
+function isBoardExam(examType: string): examType is BoardExamType {
+  return examType in BOARD_EXAM_GUIDANCE;
 }
 
 function buildPhaseSection(phase: ExamPhase | undefined, examType: string): string {
   if (!phase || phase === "preparing") return "";
-
   return `
 ⚡ PHASE: AWAITING RESULTS
 The student has finished their ${examType} exam and is waiting for results to be declared.
@@ -51,15 +49,14 @@ export function buildWellnessPrompt(
 ): string {
   const isAwaiting = examContext?.phase === "awaiting_results";
   const examType = examContext?.examType ?? "";
-  const boardNote =
-    examType in BOARD_EXAM_GUIDANCE
-      ? `\nBOARD EXAM NOTE: ${BOARD_EXAM_GUIDANCE[examType as keyof typeof BOARD_EXAM_GUIDANCE]}`
-      : "";
+  const boardNote = isBoardExam(examType)
+    ? `\nBOARD EXAM NOTE: ${BOARD_EXAM_GUIDANCE[examType]}`
+    : "";
 
   const examSection = examContext
     ? `EXAM CONTEXT:
 Exam: ${examType}
-Phase: ${examContext.phase === "awaiting_results" ? "Awaiting results (exam complete)" : "Preparing"}
+Phase: ${isAwaiting ? "Awaiting results (exam complete)" : "Preparing"}
 ${isAwaiting ? "" : `Days until exam: ${examContext.daysUntilExam}`}
 ${!isAwaiting && examContext.daysUntilExam <= 7 ? "⚠ CRITICAL: Exam is within one week — tailor advice for final-stretch preparation." : ""}
 ${!isAwaiting && examContext.daysUntilExam <= 30 && examContext.daysUntilExam > 7 ? "Note: Student is in the high-pressure final month of preparation." : ""}${boardNote}
@@ -98,10 +95,7 @@ Respond with this exact JSON structure (no markdown, no backticks):
 }`;
 }
 
-export function buildChatPrompt(
-  userMessage: string,
-  context: string
-): string {
+export function buildChatPrompt(userMessage: string, context: string): string {
   return `${EXAM_WELLNESS_SYSTEM_PROMPT}
 
 Student context: ${context}
@@ -128,19 +122,16 @@ export function buildJournalInsightPrompt(
 ${examLine}
 
 Journal title: "${title}"
-Journal entry: "${content.slice(0, 400)}"
+Journal entry: "${content.slice(0, JOURNAL_INSIGHT_CONTENT_PREVIEW)}"
 
 Respond with ONLY the insight sentence. No JSON. No preamble.`;
 }
 
 export function parseWellnessInsight(rawText: string): WellnessInsight {
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("No JSON found in AI response");
-  }
+  if (!jsonMatch) throw new Error("No JSON found in AI response");
 
   const parsed: unknown = JSON.parse(jsonMatch[0]);
-
   if (!isWellnessInsightShape(parsed)) {
     throw new Error("AI response does not match expected shape");
   }
@@ -176,14 +167,4 @@ export function sanitizeString(input: unknown): string {
     .replace(/[<>'"]/g, "")
     .trim()
     .slice(0, 300);
-}
-
-export function extractTextFromGeminiResponse(
-  response: GeminiAPIResponse
-): string {
-  const candidate = response.candidates[0];
-  if (!candidate) throw new Error("No candidate in Gemini response");
-  const part = candidate.content.parts[0];
-  if (!part) throw new Error("No parts in Gemini response");
-  return part.text;
 }

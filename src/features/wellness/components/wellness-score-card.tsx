@@ -10,25 +10,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { TrendingUp, TrendingDown, Minus, Activity } from "lucide-react";
-
-const TREND_ICONS = {
-  improving: TrendingUp,
-  declining: TrendingDown,
-  stable: Minus,
-} as const;
-
-const TREND_COLORS = {
-  improving: "text-green-600",
-  declining: "text-red-600",
-  stable: "text-yellow-600",
-} as const;
-
-const TREND_BADGE_VARIANTS = {
-  improving: "bg-green-100 text-green-800",
-  declining: "bg-red-100 text-red-800",
-  stable: "bg-yellow-100 text-yellow-800",
-} as const;
+import { Activity } from "lucide-react";
+import {
+  TREND_ICONS,
+  TREND_COLORS,
+  TREND_LABELS,
+  TREND_BADGE_VARIANTS,
+} from "@/lib/trend-styles";
+import { ANXIETY_INVERSION_BASE } from "@/lib/constants";
 
 function ScoreBar({
   label,
@@ -94,7 +83,7 @@ export function WellnessScoreCard() {
   }
 
   const TrendIcon = TREND_ICONS[score.trend];
-  const invertedAnxiety = (6 - score.anxietyAverage).toFixed(1);
+  const invertedAnxiety = (ANXIETY_INVERSION_BASE - score.anxietyAverage).toFixed(1);
 
   return (
     <Card>
@@ -112,7 +101,7 @@ export function WellnessScoreCard() {
               className={`h-3 w-3 ${TREND_COLORS[score.trend]}`}
               aria-hidden="true"
             />
-            {score.trend.charAt(0).toUpperCase() + score.trend.slice(1)}
+            {TREND_LABELS[score.trend]}
           </span>
         </div>
         <CardDescription>Based on your last 7 days of check-ins</CardDescription>

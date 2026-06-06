@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ResultsAnxietyRequestSchema } from "@/lib/validations";
 import { sanitizeString } from "@/lib/gemini";
+import { GEMINI_MODEL } from "@/lib/constants";
 import { EXAM_TRIGGER_LABELS } from "@/lib/wellness";
 import type { ResultsAnxietyGuidance, ExamStressTrigger } from "@/types";
 
@@ -100,7 +101,7 @@ function isResultsAnxietyShape(value: unknown): value is {
   );
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   const apiKey = process.env["GEMINI_API_KEY"];
   if (!apiKey) {
     return NextResponse.json(
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
     const prompt = buildResultsAnxietyPrompt(
       examContext?.examType,
       examContext?.phase,

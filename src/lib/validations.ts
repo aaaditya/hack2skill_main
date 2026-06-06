@@ -172,8 +172,8 @@ export const ResultsAnxietyRequestSchema = z.object({
 });
 
 export const JournalInsightRequestSchema = z.object({
-  title: z.string().max(100),
-  content: z.string().min(10).max(2000),
+  title: z.string().max(MAX_TITLE_LENGTH),
+  content: z.string().min(10).max(MAX_CONTENT_LENGTH),
   mood: MoodLevelSchema,
   triggers: z.array(ExamStressTriggerSchema).max(8),
   examContext: ExamContextSchema.nullable().optional(),

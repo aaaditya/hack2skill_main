@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { WellnessInsightRequestSchema } from "@/lib/validations";
 import { buildWellnessPrompt, parseWellnessInsight } from "@/lib/gemini";
-import type { ExamContext } from "@/types";
+import { GEMINI_MODEL } from "@/lib/constants";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   const apiKey = process.env["GEMINI_API_KEY"];
   if (!apiKey) {
     return NextResponse.json(
@@ -38,14 +38,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
     const moodSummary = buildMoodSummary(moodEntries);
     const journalSummary = buildJournalSummary(journalEntries);
     const prompt = buildWellnessPrompt(
       moodSummary,
       journalSummary,
-      examContext as ExamContext | null | undefined
+      examContext
     );
 
     const result = await model.generateContent(prompt);

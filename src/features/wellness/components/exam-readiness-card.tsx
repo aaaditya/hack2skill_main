@@ -11,7 +11,12 @@ import {
 } from "@/components/ui/card";
 import { calculateExamReadiness, EXAM_TRIGGER_LABELS } from "@/lib/wellness";
 import type { RiskLevel } from "@/types";
-import { GraduationCap, TrendingUp, TrendingDown, Minus, AlertTriangle } from "lucide-react";
+import { GraduationCap, AlertTriangle } from "lucide-react";
+import {
+  TREND_ICONS,
+  TREND_COLORS,
+  TREND_LABELS,
+} from "@/lib/trend-styles";
 
 const RISK_STYLES: Record<
   RiskLevel,
@@ -38,24 +43,6 @@ const RISK_STYLES: Record<
     icon: "text-red-600",
   },
 };
-
-const TREND_ICONS = {
-  improving: TrendingUp,
-  declining: TrendingDown,
-  stable: Minus,
-} as const;
-
-const TREND_LABELS = {
-  improving: "Improving",
-  declining: "Declining",
-  stable: "Stable",
-} as const;
-
-const TREND_COLORS = {
-  improving: "text-green-600",
-  declining: "text-red-600",
-  stable: "text-yellow-600",
-} as const;
 
 const DAYS_URGENCY_MESSAGES: Array<{ maxDays: number; message: string }> = [
   { maxDays: 0, message: "Exam day — stay calm and trust your preparation!" },

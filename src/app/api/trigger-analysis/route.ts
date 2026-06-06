@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { TriggerAnalysisRequestSchema } from "@/lib/validations";
 import { parseWellnessInsight } from "@/lib/gemini";
+import { GEMINI_MODEL } from "@/lib/constants";
 import type { ExamContext } from "@/types";
 
 export const runtime = "nodejs";
@@ -50,7 +51,7 @@ Respond with exactly this JSON:
 }`;
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   const apiKey = process.env["GEMINI_API_KEY"];
   if (!apiKey) {
     return NextResponse.json(
@@ -78,10 +79,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
     const prompt = buildRootCausePrompt(
       triggerSummary,
-      examContext as ExamContext | null | undefined
+      examContext
     );
     const result = await model.generateContent(prompt);
     const rawText = result.response.text();
