@@ -1,122 +1,159 @@
-# MindfulU — Student Wellness Companion
+# MindfulU — Exam Preparation Wellness Companion
 
-A production-quality web application that helps students track mood, identify stress triggers, reflect on emotions, and receive AI-powered wellness support.
+A production-quality web application helping students manage mental well-being during board exams, competitive entrance tests (NEET, JEE, CUET, CAT, GATE, UPSC), and result seasons — powered by Google Gemini AI.
+
+## Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/aaaditya/hack2skill_main&env=GEMINI_API_KEY&envDescription=Gemini%20API%20key%20from%20Google%20AI%20Studio&envLink=https://aistudio.google.com/app/apikey&project-name=mindfulu&repository-name=mindfulu)
+
+### One-click deploy
+
+1. Click the button above
+2. Connect your GitHub account
+3. Set `GEMINI_API_KEY` — get it free at [aistudio.google.com](https://aistudio.google.com/app/apikey)
+4. Deploy
+
+### Manual deploy
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy from project root
+vercel
+
+# Set environment variable
+vercel env add GEMINI_API_KEY
+```
+
+### Required environment variables
+
+| Variable | Description | Required |
+|---|---|---|
+| `GEMINI_API_KEY` | Google Gemini API key | ✅ Yes |
+
+Get your free Gemini API key at [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey).
+
+---
 
 ## Features
 
-- **Mood Check-ins** — Track daily mood, energy, and anxiety with 5-point emoji scales, note-taking, and stress trigger tagging
-- **Reflection Journal** — Guided journaling with reflection prompts to surface emotional patterns and stressors
-- **Wellness Dashboard** — Composite wellness score (0–100), trend detection, and stress trigger frequency chart
-- **AI Wellness Insights** — Gemini-powered analysis of patterns with actionable suggestions and trigger identification
-- **Wellness Chat** — Conversational AI companion for real-time support and coping strategies
+- **Mood Check-ins** — Track daily mood, energy, and exam anxiety with 5-point emoji scales
+- **Stress Trigger Intelligence** — Identify and analyse exam-specific stressors (mock test performance, syllabus backlog, results anxiety, and 5 more)
+- **Study Reflection Journal** — Guided prompts with automatic AI insight on every entry
+- **Exam Readiness Dashboard** — Wellness score, trend detection, trigger frequency, AI root-cause analysis
+- **Results Season Support** — Dedicated mode for the waiting period after exams
+- **Exam Prep Coach** — Real-time AI chat tailored to your exam type and phase
+- **Board Exams** — Specific support for Class 10 and Class 12 board students
+- **All 6 Competitive Exams** — NEET, JEE, CUET, CAT, GATE, UPSC
+
+---
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript (strict mode)
-- **Styling**: Tailwind CSS v4
-- **UI Components**: shadcn/ui (Radix UI primitives)
-- **AI**: Google Gemini 1.5 Flash via `@google/generative-ai`
-- **Validation**: Zod
-- **Forms**: React Hook Form
-- **Testing**: Jest + Testing Library
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript (strict mode + `noUncheckedIndexedAccess`) |
+| Styling | Tailwind CSS v4 |
+| UI Components | shadcn/ui (Radix UI primitives) |
+| AI | Google Gemini 1.5 Flash |
+| Validation | Zod |
+| Forms | React Hook Form |
+| Testing | Jest 30 + Testing Library |
 
-## Getting Started
+---
+
+## Local Development
 
 ### Prerequisites
 
 - Node.js 20+
 - A [Google AI Studio](https://aistudio.google.com/) API key
 
-### Installation
+### Setup
 
 ```bash
+# Install dependencies
 npm install
-```
 
-### Environment Setup
-
-Create a `.env.local` file:
-
-```bash
+# Create local environment file
 cp .env.example .env.local
-# Edit .env.local and add your GEMINI_API_KEY
-```
+# Edit .env.local and add: GEMINI_API_KEY=your_key_here
 
-### Development
-
-```bash
+# Start development server
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Build
+### Commands
 
 ```bash
-npm run build
-npm start
+npm run dev           # Development server
+npm run build         # Production build
+npm start             # Production server
+npm test              # Run 190 tests across 10 suites
+npm run test:coverage # Coverage report
+npm run type-check    # TypeScript strict check
+npm run lint          # ESLint
 ```
 
-## Testing
-
-```bash
-npm test                  # Run all tests
-npm run test:coverage     # With coverage report
-npm run type-check        # TypeScript strict type check
-npm run lint              # ESLint
-```
-
-Test coverage includes:
-- **Wellness score calculation** — trend detection, score weighting, edge cases
-- **AI response parsing** — JSON extraction, sanitization, shape validation
-- **Form validation schemas** — all Zod schemas including prompt injection prevention
+---
 
 ## Architecture
 
 ```
 src/
-├── app/                   # Next.js App Router pages & API routes
+├── middleware.ts              # Edge rate limiting (20 req/min per IP)
+├── app/
 │   ├── api/
-│   │   ├── wellness/      # POST /api/wellness — Gemini insight generation
-│   │   └── chat/          # POST /api/chat — wellness chat
-│   ├── dashboard/
-│   ├── journal/
-│   ├── mood/
-│   └── chat/
-├── features/              # Feature-based modules
-│   ├── mood/              # Mood tracking components
-│   ├── journal/           # Journaling components
-│   ├── wellness/          # Score, insights, trigger chart + global store
-│   └── ai/                # Wellness chat component
+│   │   ├── chat/              # POST — exam prep wellness chat
+│   │   ├── wellness/          # POST — AI wellness insights
+│   │   ├── trigger-analysis/  # POST — root cause analysis
+│   │   ├── results-anxiety/   # POST — result season support
+│   │   └── journal-insight/   # POST — per-entry AI reflection
+│   ├── dashboard/             # Exam readiness + trigger intelligence
+│   ├── mood/                  # Daily check-ins
+│   ├── journal/               # Study reflections
+│   └── chat/                  # Exam prep coach
+├── features/
+│   ├── exam/                  # ExamContextSetup (type + phase)
+│   ├── mood/                  # MoodTrackerForm, MoodHistory
+│   ├── journal/               # JournalEntryForm, JournalList
+│   ├── wellness/              # Dashboard cards, AI panels, store
+│   └── ai/                    # WellnessChat
 ├── components/
-│   ├── ui/                # shadcn/ui primitives
-│   └── shared/            # Navigation, ErrorBoundary
+│   ├── ui/                    # Button, Card, Input, Progress…
+│   └── shared/                # Navigation, TriggerPicker, AiErrorAlert
 ├── lib/
-│   ├── wellness.ts        # Score calculation, labels, formatting
-│   ├── gemini.ts          # Prompt building, response parsing
-│   ├── validations.ts     # Zod schemas
-│   └── utils.ts           # cn() helper
+│   ├── wellness.ts            # Score + exam readiness calculation
+│   ├── trigger-analysis.ts    # Frequency, trend, insight pipeline
+│   ├── gemini.ts              # Prompt builders + response parsing
+│   └── validations.ts         # Zod schemas for all API inputs
 └── types/
-    └── index.ts           # Shared TypeScript types
+    └── index.ts               # ExamType, ExamPhase, MoodEntry…
 ```
+
+---
 
 ## Security
 
-- API key is **server-side only** — never exposed to the client
-- All API inputs validated with Zod before processing
-- User input sanitized (HTML stripped, character limits enforced)
-- Prompt injection prevention via regex-based content checks
-- All data stored locally in the browser (localStorage) — no server-side user data
+- `GEMINI_API_KEY` is server-side only — never in the client bundle
+- All API inputs validated with Zod before any AI call
+- Prompt injection prevention via regex on all chat inputs (client + server)
+- HTML tag stripping and character limits on all AI responses
+- Rate limiting middleware: 20 requests/minute per IP on all `/api/*` routes
+- Security headers: `X-Frame-Options`, `X-Content-Type-Options`, `HSTS`, `Referrer-Policy`
+- All user data stored locally in `localStorage` — no server-side persistence
 
 ## Accessibility
 
-- Skip-to-content link
-- Semantic HTML with proper heading hierarchy
-- ARIA labels on all interactive elements
-- `aria-pressed` for toggle buttons
-- `role="log"` with `aria-live` for the chat feed
-- `role="alert"` for error messages
-- `aria-current="page"` for navigation
-- Full keyboard navigation support
-- WCAG 2.1 AA color contrast targets
+- Skip-to-content link (keyboard-only via `focus-visible`)
+- Semantic HTML: `<nav>`, `<main>`, `<section>`, `<article>`, `<dl>`, `<time>`
+- ARIA labels on all interactive elements, `aria-pressed` on toggles
+- `role="log"` + `aria-live="polite"` for chat stream
+- `role="alert"` + `aria-live="assertive"` for errors
+- Full keyboard navigation; `focus-visible:ring` on every interactive element
+- `prefers-reduced-motion` media query disables all animations and transitions
+- Responsive navigation with hamburger menu for mobile viewports
