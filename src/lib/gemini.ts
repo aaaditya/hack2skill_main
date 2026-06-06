@@ -1,7 +1,9 @@
 import type { WellnessInsight, ExamContext, ExamPhase, ExamType } from "@/types";
 import { JOURNAL_INSIGHT_CONTENT_PREVIEW } from "@/lib/constants";
 
-const EXAM_WELLNESS_SYSTEM_PROMPT = `You are a compassionate exam preparation wellness coach for students in India. Your role is to:
+// ─── Shared identity (no output-format instruction — used only by insight routes) ─
+
+const EXAM_WELLNESS_IDENTITY = `You are a compassionate exam preparation wellness coach for students in India. Your role is to:
 1. Analyze mood patterns and exam-specific stress triggers
 2. Provide empathetic, context-aware coping strategies and study wellness advice
 3. Identify concerning patterns that may impact performance or mental health
@@ -13,8 +15,18 @@ IMPORTANT RULES:
 - Do not provide medical diagnoses or generate code
 - Keep responses warm, practical, and grounded in the student's specific situation
 - If urgent distress signals appear, recommend professional counseling resources
-- Never trivialize exam pressure or result anxiety
+- Never trivialize exam pressure or result anxiety`;
+
+// Used by insight/analysis routes that must return structured JSON
+const EXAM_WELLNESS_SYSTEM_PROMPT = `${EXAM_WELLNESS_IDENTITY}
 - Respond in valid JSON matching the WellnessInsight schema exactly`;
+
+// Used exclusively by the chat route — plain conversational text, NO JSON
+const CHAT_SYSTEM_PROMPT = `${EXAM_WELLNESS_IDENTITY}
+- Respond in plain conversational text — NO JSON, NO markdown code fences, NO object literals
+- Write as a warm, supportive friend — not a clinical report
+- Keep responses under 150 words
+- Use natural paragraph breaks; never output structured data`;
 
 const BOARD_EXAM_GUIDANCE = {
   "Class 12 Boards":
@@ -102,16 +114,17 @@ Respond with this exact JSON structure (no markdown, no backticks):
 
 /**
  * Builds the Gemini prompt for the real-time exam prep chat coach.
+ * Uses CHAT_SYSTEM_PROMPT — explicitly forbids JSON output.
  * Context string must include exam type, phase, mood, and active triggers.
  */
 export function buildChatPrompt(userMessage: string, context: string): string {
-  return `${EXAM_WELLNESS_SYSTEM_PROMPT}
+  return `${CHAT_SYSTEM_PROMPT}
 
 Student context: ${context}
 
 Student message: ${userMessage}
 
-Respond as a supportive wellness coach. Keep response under 150 words. Be warm and practical. If the student is awaiting results, focus on managing uncertainty rather than study advice. If they mention a board exam (Class 10/12), acknowledge the unique pressures of stream-choice anxiety and parental expectations.`;
+Respond as a supportive wellness coach in plain conversational text — NO JSON, NO code fences. Be warm and practical. If the student is awaiting results, focus on managing uncertainty rather than study advice. If they mention a board exam (Class 10/12), acknowledge the unique pressures of stream-choice anxiety and parental expectations.`;
 }
 
 export function buildJournalInsightPrompt(
@@ -180,4 +193,146 @@ export function sanitizeString(input: unknown): string {
     .replace(/[<>'"]/g, "")
     .trim()
     .slice(0, 300);
+}
+
+// ─── Chat response parser ─────────────────────────────────────────────────────
+
+/**
+ * Shapes of JSON Gemini may return for chat responses.
+ * Despite the prompt forbidding JSON, we handle it defensively.
+ */
+interface CoachJsonResponse {
+  message?: unknown;
+  response?: unknown;
+  text?: unknown;
+  content?: unknown;
+  reply?: unknown;
+  wellness_coach_response?: unknown;
+  summary?: unknown;
+  suggestions?: unknown;
+  advice?: unknown;
+}
+
+/**
+ * Strips markdown code fences (```json ... ``` or ``` ... ```) from a string.
+ */
+function stripCodeFences(text: string): string {
+  return text
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/, "")
+    .trim();
+}
+
+/**
+ * Formats a WellnessInsight-shaped JSON object into a readable chat message.
+ * Used when Gemini returns the structured insight format for a chat reply.
+ */
+function formatInsightAsText(obj: CoachJsonResponse): string {
+  const lines: string[] = [];
+
+  const summary = typeof obj.summary === "string" ? obj.summary.trim() : "";
+  if (summary) lines.push(summary);
+
+  const suggestions = Array.isArray(obj.suggestions) ? obj.suggestions : [];
+  if (suggestions.length > 0) {
+    if (lines.length > 0) lines.push("");
+    lines.push("Here are some strategies:");
+    for (const s of suggestions) {
+      if (typeof s === "string" && s.trim()) {
+        lines.push(`• ${s.trim()}`);
+      }
+    }
+  }
+
+  const advice =
+    typeof obj.advice === "string"
+      ? obj.advice
+      : typeof obj.message === "string"
+      ? obj.message
+      : typeof obj.response === "string"
+      ? obj.response
+      : typeof obj.text === "string"
+      ? obj.text
+      : typeof obj.content === "string"
+      ? obj.content
+      : typeof obj.reply === "string"
+      ? obj.reply
+      : "";
+
+  if (advice.trim() && !lines.some((l) => l === advice.trim())) {
+    if (lines.length > 0) lines.push("");
+    lines.push(advice.trim());
+  }
+
+  return lines.join("\n").trim();
+}
+
+/**
+ * Parses a raw Gemini chat reply into a clean, human-readable display string.
+ *
+ * Handles all defensive cases:
+ * - Plain text response (ideal path): returned as-is after sanitization
+ * - Markdown-wrapped JSON (```json { ... }```): fences stripped, JSON extracted
+ * - Raw JSON object: key fields extracted and formatted as readable text
+ * - Malformed / unparseable content: raw text returned as fallback
+ *
+ * Never returns raw JSON, object literals, or markdown code fences.
+ */
+export function parseCoachResponse(rawText: string): string {
+  const trimmed = rawText.trim();
+  if (!trimmed) return "I'm here to help. Could you share a bit more?";
+
+  // Step 1: strip markdown code fences if present
+  const stripped = stripCodeFences(trimmed);
+
+  // Step 2: attempt JSON parse
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(stripped);
+  } catch {
+    // Not valid JSON at top level — try extracting embedded JSON object
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch {
+        // Not valid JSON — fall through to plain text path
+      }
+    }
+  }
+
+  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const obj = parsed as CoachJsonResponse;
+
+    // Handle nested wellness_coach_response wrapper
+    if (
+      typeof obj.wellness_coach_response === "object" &&
+      obj.wellness_coach_response !== null
+    ) {
+      const inner = obj.wellness_coach_response as CoachJsonResponse;
+      const formatted = formatInsightAsText(inner);
+      if (formatted) return sanitizeChatReply(formatted);
+    }
+
+    const formatted = formatInsightAsText(obj);
+    if (formatted) return sanitizeChatReply(formatted);
+
+    // Last resort: stringify readable fields
+    return "I'm here to support you. What's on your mind?";
+  }
+
+  // Plain text path — sanitize and return
+  return sanitizeChatReply(stripped || trimmed);
+}
+
+/**
+ * Sanitizes a resolved chat reply string for safe display.
+ * Less aggressive than sanitizeString — preserves bullet points and newlines.
+ */
+function sanitizeChatReply(text: string): string {
+  return text
+    .replace(/<[^>]*>/g, "")   // strip any HTML tags
+    .replace(/[<>]/g, "")      // remove stray angle brackets
+    .trim()
+    .slice(0, 1200);           // generous cap for chat replies
 }

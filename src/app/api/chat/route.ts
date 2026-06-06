@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { ChatMessageSchema } from "@/lib/validations";
-import { buildChatPrompt, sanitizeString } from "@/lib/gemini";
+import { buildChatPrompt, parseCoachResponse } from "@/lib/gemini";
 import { GEMINI_MODEL } from "@/lib/constants";
 
 export const runtime = "nodejs";
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       contents: prompt,
     });
     const reply = response.text ?? "";
-    const sanitizedReply = sanitizeString(reply.slice(0, 1000));
+    const sanitizedReply = parseCoachResponse(reply);
 
     return NextResponse.json({ reply: sanitizedReply }, { status: 200 });
   } catch (err) {
