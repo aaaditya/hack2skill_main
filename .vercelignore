@@ -1,0 +1,10 @@
+# Vercel deployment — exclude test files, config files, and dev artifacts
+__tests__
+*.test.ts
+*.test.tsx
+jest.config.ts
+jest.setup.ts
+coverage
+.env.example
+AGENTS.md
+CLAUDE.md
