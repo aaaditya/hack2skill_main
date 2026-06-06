@@ -1,0 +1,108 @@
+import { z } from "zod";
+
+export const MoodLevelSchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4),
+  z.literal(5),
+]);
+
+export const StressTriggerCategorySchema = z.enum([
+  "academic",
+  "social",
+  "financial",
+  "health",
+  "family",
+  "other",
+]);
+
+const MAX_NOTES_LENGTH = 500;
+const MAX_TITLE_LENGTH = 100;
+const MAX_CONTENT_LENGTH = 2000;
+const MAX_MESSAGE_LENGTH = 1000;
+
+export const MoodEntrySchema = z.object({
+  moodLevel: MoodLevelSchema,
+  energyLevel: MoodLevelSchema,
+  anxietyLevel: MoodLevelSchema,
+  notes: z
+    .string()
+    .max(MAX_NOTES_LENGTH, `Notes must be under ${MAX_NOTES_LENGTH} characters`)
+    .transform((val) => val.trim()),
+  triggers: z
+    .array(StressTriggerCategorySchema)
+    .max(6, "Select at most 6 triggers"),
+});
+
+export const JournalEntrySchema = z.object({
+  title: z
+    .string()
+    .min(1, "Title is required")
+    .max(MAX_TITLE_LENGTH, `Title must be under ${MAX_TITLE_LENGTH} characters`)
+    .transform((val) => val.trim()),
+  content: z
+    .string()
+    .min(10, "Journal entry must be at least 10 characters")
+    .max(
+      MAX_CONTENT_LENGTH,
+      `Content must be under ${MAX_CONTENT_LENGTH} characters`
+    )
+    .transform((val) => val.trim()),
+  mood: MoodLevelSchema,
+  triggers: z
+    .array(StressTriggerCategorySchema)
+    .max(6, "Select at most 6 triggers"),
+});
+
+export const ChatMessageSchema = z.object({
+  message: z
+    .string()
+    .min(1, "Message cannot be empty")
+    .max(
+      MAX_MESSAGE_LENGTH,
+      `Message must be under ${MAX_MESSAGE_LENGTH} characters`
+    )
+    .transform((val) => val.trim())
+    .refine(
+      (val) => !/\b(ignore previous|system prompt|jailbreak|bypass)\b/i.test(val),
+      "Invalid message content"
+    ),
+  context: z
+    .object({
+      recentMoodLevel: MoodLevelSchema.optional(),
+      recentTriggers: z.array(StressTriggerCategorySchema).optional(),
+    })
+    .optional(),
+});
+
+export const WellnessInsightRequestSchema = z.object({
+  moodEntries: z
+    .array(
+      z.object({
+        moodLevel: MoodLevelSchema,
+        energyLevel: MoodLevelSchema,
+        anxietyLevel: MoodLevelSchema,
+        notes: z.string().max(MAX_NOTES_LENGTH),
+        triggers: z.array(StressTriggerCategorySchema),
+        timestamp: z.string(),
+      })
+    )
+    .max(30),
+  journalEntries: z
+    .array(
+      z.object({
+        title: z.string().max(MAX_TITLE_LENGTH),
+        content: z.string().max(MAX_CONTENT_LENGTH),
+        mood: MoodLevelSchema,
+        triggers: z.array(StressTriggerCategorySchema),
+        timestamp: z.string(),
+      })
+    )
+    .max(10),
+});
+
+export type MoodEntryInput = z.infer<typeof MoodEntrySchema>;
+export type JournalEntryInput = z.infer<typeof JournalEntrySchema>;
+export type ChatMessageInput = z.infer<typeof ChatMessageSchema>;
+export type WellnessInsightRequest = z.infer<typeof WellnessInsightRequestSchema>;
