@@ -72,23 +72,10 @@ export interface WellnessInsight {
   positives: string[];
 }
 
-export interface AIWellnessResponse {
-  insight: WellnessInsight;
-  score: number;
-  urgencyLevel: "low" | "medium" | "high";
-}
-
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
-}
-
-export interface WellnessSession {
-  moodEntries: MoodEntry[];
-  journalEntries: JournalEntry[];
-  chatHistory: ChatMessage[];
-  examContext: ExamContext | null;
 }
 
 // ─── Trigger Intelligence ─────────────────────────────────────────────────────

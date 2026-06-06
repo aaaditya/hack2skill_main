@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,10 +18,6 @@ export default function ErrorPage({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error("[Page Error]", error);
-  }, [error]);
-
   return (
     <div className="flex items-center justify-center min-h-[400px]">
       <Card
@@ -38,6 +33,9 @@ export default function ErrorPage({
           <CardDescription>
             An unexpected error occurred. Your data is safe — it&apos;s stored
             locally in your browser.
+            {error.digest && (
+              <span className="sr-only">Error reference: {error.digest}</span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
