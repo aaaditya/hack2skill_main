@@ -26,6 +26,8 @@ type ChatInputForm = z.infer<typeof ChatInputSchema>;
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isAssistant = message.role === "assistant";
+  const senderLabel = isAssistant ? "Coach" : "You";
+
   return (
     <div
       className={cn(
@@ -55,8 +57,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             ? "bg-muted text-foreground rounded-tl-sm"
             : "bg-primary text-primary-foreground rounded-tr-sm"
         )}
-        role={isAssistant ? "article" : undefined}
-        aria-label={isAssistant ? "Assistant response" : undefined}
+        role="article"
+        aria-label={`${senderLabel}: ${message.content}`}
       >
         {message.content}
       </div>
@@ -212,8 +214,8 @@ export function WellnessChat() {
           {isLoading && (
             <div
               className="flex gap-2 max-w-[85%] self-start"
-              aria-live="polite"
-              aria-label="Assistant is thinking"
+              role="status"
+              aria-label="Coach is composing a response"
             >
               <div className="shrink-0 h-7 w-7 rounded-full flex items-center justify-center bg-primary/10">
                 <Bot className="h-4 w-4 text-primary" aria-hidden="true" />
@@ -232,6 +234,7 @@ export function WellnessChat() {
 
         {error && (
           <p
+            id="chat-api-error"
             className="text-xs text-destructive"
             role="alert"
             aria-live="assertive"
@@ -259,7 +262,13 @@ export function WellnessChat() {
             disabled={isLoading}
             maxLength={1000}
             aria-label="Chat message"
-            aria-describedby={errors.message ? "chat-error" : undefined}
+            aria-describedby={
+              errors.message
+                ? "chat-error"
+                : error
+                ? "chat-api-error"
+                : undefined
+            }
             className="flex-1"
             autoComplete="off"
           />

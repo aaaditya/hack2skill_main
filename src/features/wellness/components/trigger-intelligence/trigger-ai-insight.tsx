@@ -50,7 +50,6 @@ export function TriggerAiInsight({
             <li
               key={trigger}
               className="flex items-start gap-2 text-sm"
-              aria-label={sentence}
             >
               <span
                 className="shrink-0 text-primary mt-0.5 font-bold"

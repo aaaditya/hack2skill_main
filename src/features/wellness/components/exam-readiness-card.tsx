@@ -204,7 +204,6 @@ export function ExamReadinessCard() {
 
         <div
           className="rounded-md bg-white/70 border border-border/50 px-3 py-2"
-          aria-live="polite"
         >
           <p className="text-xs text-muted-foreground leading-relaxed">
             {getDaysMessage(daysRemaining)}

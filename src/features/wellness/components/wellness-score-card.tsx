@@ -157,7 +157,10 @@ export function WellnessScoreCard() {
             <Progress
               value={Math.min(score.journalFrequency, 100)}
               className="h-2"
-              aria-label={`Journal activity: ${score.journalFrequency}%`}
+              aria-label={`Journal activity: ${score.journalFrequency}% of weekly target`}
+              aria-valuenow={Math.min(score.journalFrequency, 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
             />
             <p className="text-xs text-muted-foreground">
               Regular journaling improves self-awareness

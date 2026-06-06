@@ -56,16 +56,17 @@ function MoodScale({
   getLabel,
   emojiMap,
 }: MoodScaleProps) {
+  const legendId = `${id}-scale-legend`;
   return (
     <fieldset>
-      <legend className="text-sm font-medium mb-1">
+      <legend id={legendId} className="text-sm font-medium mb-1">
         {label}{" "}
         <span className="text-muted-foreground font-normal">— {description}</span>
       </legend>
       <div
         className="flex gap-2 flex-wrap"
         role="group"
-        aria-labelledby={`${id}-legend`}
+        aria-labelledby={legendId}
       >
         {([1, 2, 3, 4, 5] as MoodLevel[]).map((level) => (
           <button
@@ -239,6 +240,7 @@ export function MoodTrackerForm() {
               className="flex flex-wrap gap-2"
               role="group"
               aria-labelledby="triggers-label"
+              aria-describedby={errors.triggers ? "triggers-error" : undefined}
             >
               {EXAM_TRIGGERS.map((trigger) => (
                 <button
@@ -262,6 +264,7 @@ export function MoodTrackerForm() {
             </div>
             {errors.triggers && (
               <p
+                id="triggers-error"
                 className="mt-1 text-xs text-destructive"
                 role="alert"
               >
