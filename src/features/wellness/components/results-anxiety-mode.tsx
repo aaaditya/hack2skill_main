@@ -251,9 +251,13 @@ export function ResultsAnxietyMode() {
     [state.moodEntries, state.journalEntries]
   );
 
+  // Activate when the student is in the awaiting_results phase OR when
+  // results_anxiety is a top trigger with low-mood entries
   const isActive = useMemo(
-    () => shouldActivateResultsAnxietyMode(analysis.frequencies),
-    [analysis.frequencies]
+    () =>
+      state.examContext?.phase === "awaiting_results" ||
+      shouldActivateResultsAnxietyMode(analysis.frequencies),
+    [state.examContext?.phase, analysis.frequencies]
   );
 
   const fetchGuidance = useCallback(async () => {
@@ -308,19 +312,26 @@ export function ResultsAnxietyMode() {
           id="results-anxiety-heading"
           className="text-xl font-semibold"
         >
-          Results Anxiety Support
+          {state.examContext?.phase === "awaiting_results"
+            ? "Result Season Support"
+            : "Results Anxiety Support"}
         </h2>
         <span
           className="inline-flex items-center rounded-full bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-0.5 text-xs font-semibold"
-          aria-label="Results anxiety detected as a primary trigger"
+          aria-label={
+            state.examContext?.phase === "awaiting_results"
+              ? "Active: you are currently awaiting results"
+              : "Active: results anxiety detected as a primary stressor"
+          }
         >
           Active
         </span>
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Results anxiety has appeared as a primary stressor in your recent
-        entries. Everything here is designed to help you through this.
+        {state.examContext?.phase === "awaiting_results"
+          ? `You've set your phase to "Awaiting Results" for ${state.examContext.examType ?? "your exam"}. Everything here is designed to help you through this waiting period.`
+          : "Results anxiety has appeared as a primary stressor in your recent entries. Everything here is designed to help you through this."}
       </p>
 
       <WorthReminderCard />

@@ -1,20 +1,26 @@
-import type { WellnessInsight, ExamContext } from "@/types";
+import type { WellnessInsight, ExamContext, ExamPhase } from "@/types";
 
-const EXAM_WELLNESS_SYSTEM_PROMPT = `You are a compassionate exam preparation wellness coach for competitive exam students in India. Your role is to:
-1. Analyze mood patterns and exam-specific stress triggers from student data
-2. Provide empathetic, exam-focused coping strategies and study wellness advice
-3. Identify concerning patterns that may impact exam performance or mental health
-4. Celebrate positive progress and build confidence
+const EXAM_WELLNESS_SYSTEM_PROMPT = `You are a compassionate exam preparation wellness coach for students in India. Your role is to:
+1. Analyze mood patterns and exam-specific stress triggers
+2. Provide empathetic, context-aware coping strategies and study wellness advice
+3. Identify concerning patterns that may impact performance or mental health
+4. Build confidence and acknowledge how real exam pressure is
 
 IMPORTANT RULES:
-- Focus ONLY on exam preparation wellness support (NEET, JEE, CUET, CAT, GATE, UPSC, Board Exams, etc.)
-- Do not provide medical diagnoses
-- Do not generate code or off-topic content
-- Keep responses warm, supportive, and practically grounded in exam preparation reality
-- Reference specific exam contexts (e.g., syllabus, revision strategies, mock test recovery)
+- Focus ONLY on exam preparation and result-season wellness support
+- Support all exam types: NEET, JEE, CUET, CAT, GATE, UPSC, Class 10/12 Boards
+- Do not provide medical diagnoses or generate code
+- Keep responses warm, practical, and grounded in the student's specific situation
 - If urgent distress signals appear, recommend professional counseling resources
-- Never trivialize exam pressure — acknowledge how real and valid the stress is
+- Never trivialize exam pressure or result anxiety
 - Respond in valid JSON matching the WellnessInsight schema exactly`;
+
+const BOARD_EXAM_GUIDANCE = {
+  "Class 12 Boards":
+    "Class 12 board exams carry enormous weight — stream choices, college admissions, and family expectations all converge. Acknowledge the pressure of practicals, ISA assessments, and the finality this exam feels like.",
+  "Class 10 Boards":
+    "Class 10 boards are the first high-stakes milestone. Students face stream-choice anxiety on top of exam pressure. Emphasize that this moment is one step, not a definition.",
+} as const;
 
 interface GeminiAPIResponse {
   candidates: Array<{
@@ -24,43 +30,71 @@ interface GeminiAPIResponse {
   }>;
 }
 
+function buildPhaseSection(phase: ExamPhase | undefined, examType: string): string {
+  if (!phase || phase === "preparing") return "";
+
+  return `
+⚡ PHASE: AWAITING RESULTS
+The student has finished their ${examType} exam and is waiting for results to be declared.
+This is the result-season — a distinct high-anxiety period.
+- Do NOT give revision or study advice
+- Focus on managing the uncertainty of waiting
+- Help them process anxiety about what the result might mean
+- Reinforce that their worth is not defined by the result
+- Suggest healthy ways to occupy the waiting period`;
+}
+
 export function buildWellnessPrompt(
   moodSummary: string,
   journalSummary: string,
   examContext?: ExamContext | null
 ): string {
+  const isAwaiting = examContext?.phase === "awaiting_results";
+  const examType = examContext?.examType ?? "";
+  const boardNote =
+    examType in BOARD_EXAM_GUIDANCE
+      ? `\nBOARD EXAM NOTE: ${BOARD_EXAM_GUIDANCE[examType as keyof typeof BOARD_EXAM_GUIDANCE]}`
+      : "";
+
   const examSection = examContext
     ? `EXAM CONTEXT:
-Exam: ${examContext.examType}
-Days until exam: ${examContext.daysUntilExam}
-${examContext.daysUntilExam <= 7 ? "⚠ CRITICAL: Exam is within one week — tailor advice for final stretch preparation." : ""}
-${examContext.daysUntilExam <= 30 ? "Note: Student is in the high-pressure final month of preparation." : ""}
-`
-    : "EXAM CONTEXT: Not specified (provide general exam preparation wellness advice).\n";
+Exam: ${examType}
+Phase: ${examContext.phase === "awaiting_results" ? "Awaiting results (exam complete)" : "Preparing"}
+${isAwaiting ? "" : `Days until exam: ${examContext.daysUntilExam}`}
+${!isAwaiting && examContext.daysUntilExam <= 7 ? "⚠ CRITICAL: Exam is within one week — tailor advice for final-stretch preparation." : ""}
+${!isAwaiting && examContext.daysUntilExam <= 30 && examContext.daysUntilExam > 7 ? "Note: Student is in the high-pressure final month of preparation." : ""}${boardNote}
+${buildPhaseSection(examContext.phase, examType)}`
+    : "EXAM CONTEXT: Not specified (provide general exam preparation wellness advice).";
+
+  const insightExamples = isAwaiting
+    ? `- "Waiting for results is its own form of exam — the uncertainty is genuinely difficult"
+- "Result anxiety tends to peak 1-2 weeks before declaration — this is normal and temporary"
+- "Filling waiting time with meaningful activity helps quiet the result-spiral"`
+    : `- "Stress increases when sleep drops below 6 hours — especially critical during revision weeks"
+- "Mock test anxiety is the dominant trigger — consider post-test reflection over score obsession"
+- "Confidence tends to dip in the final month — grounding techniques can stabilize it"`;
 
   return `${EXAM_WELLNESS_SYSTEM_PROMPT}
 
-Analyze this student's exam preparation wellness data and respond with a JSON object:
+Analyze this student's wellness data and respond with a JSON object:
 
 ${examSection}
+
 MOOD DATA (last 7 days):
 ${moodSummary}
 
 JOURNAL SUMMARY:
 ${journalSummary}
 
-Generate exam-preparation-specific insights. Examples of the kind of insights to provide:
-- "Stress increases when sleep drops below 6 hours — especially critical during revision weeks"
-- "Mock test anxiety is the dominant trigger — consider focusing on post-test reflection rather than score obsession"
-- "Confidence appears to decline before the exam — this is normal and manageable with grounding techniques"
-- "Energy dips in the afternoon suggest scheduling difficult topics for morning sessions"
+Generate context-specific insights. Examples:
+${insightExamples}
 
 Respond with this exact JSON structure (no markdown, no backticks):
 {
-  "summary": "2-3 sentence empathetic overview acknowledging their specific exam preparation challenges",
-  "suggestions": ["exam-specific actionable suggestion 1", "study wellness tip 2", "coping strategy 3"],
-  "triggers": ["identified exam stressor 1 with brief explanation", "identified stressor 2"],
-  "positives": ["specific positive observation about their preparation journey 1", "positive observation 2"]
+  "summary": "2-3 sentence empathetic overview of their current situation",
+  "suggestions": ["specific actionable suggestion 1", "coping strategy 2", "wellness tip 3"],
+  "triggers": ["identified stressor 1 with brief explanation", "identified stressor 2"],
+  "positives": ["specific positive observation 1", "positive observation 2"]
 }`;
 }
 
@@ -74,7 +108,29 @@ Student context: ${context}
 
 Student message: ${userMessage}
 
-Respond as a supportive exam preparation wellness coach. Keep response under 150 words. Be warm, practical, and specific to their exam preparation context. If they mention a specific exam (NEET/JEE/CAT/GATE/UPSC etc.), tailor advice to that exam's specific demands.`;
+Respond as a supportive wellness coach. Keep response under 150 words. Be warm and practical. If the student is awaiting results, focus on managing uncertainty rather than study advice. If they mention a board exam (Class 10/12), acknowledge the unique pressures of stream-choice anxiety and parental expectations.`;
+}
+
+export function buildJournalInsightPrompt(
+  title: string,
+  content: string,
+  examContext?: ExamContext | null
+): string {
+  const examLine = examContext
+    ? `Exam: ${examContext.examType}, Phase: ${examContext.phase === "awaiting_results" ? "awaiting results" : "preparing"}.`
+    : "";
+
+  return `You are a compassionate exam wellness coach. A student has written a journal entry. Generate a single supportive sentence (max 60 words) that:
+- Acknowledges one specific thing they expressed
+- Offers one gentle perspective or encouragement
+- Uses warm, non-clinical language
+
+${examLine}
+
+Journal title: "${title}"
+Journal entry: "${content.slice(0, 400)}"
+
+Respond with ONLY the insight sentence. No JSON. No preamble.`;
 }
 
 export function parseWellnessInsight(rawText: string): WellnessInsight {
@@ -113,7 +169,7 @@ function isWellnessInsightShape(value: unknown): value is {
   );
 }
 
-function sanitizeString(input: unknown): string {
+export function sanitizeString(input: unknown): string {
   if (typeof input !== "string") return "";
   return input
     .replace(/<[^>]*>/g, "")

@@ -33,14 +33,16 @@ type WellnessAction =
   | { type: "UPDATE_WELLNESS_SCORE"; payload: WellnessScore }
   | { type: "SET_EXAM_CONTEXT"; payload: ExamContext }
   | { type: "CLEAR_EXAM_CONTEXT" }
+  | { type: "UPDATE_JOURNAL_INSIGHT"; payload: { id: string; aiInsight: string } }
   | { type: "HYDRATE"; payload: Omit<WellnessState, "isLoaded"> }
   | { type: "CLEAR_CHAT" };
 
 interface WellnessContextValue {
   state: WellnessState;
   addMoodEntry: (entry: Omit<MoodEntry, "id" | "timestamp">) => void;
-  addJournalEntry: (entry: Omit<JournalEntry, "id" | "timestamp">) => void;
+  addJournalEntry: (entry: Omit<JournalEntry, "id" | "timestamp">) => string;
   addChatMessage: (message: Omit<ChatMessage, "timestamp">) => void;
+  updateJournalInsight: (id: string, aiInsight: string) => void;
   setExamContext: (ctx: ExamContext) => void;
   clearExamContext: () => void;
   clearChat: () => void;
@@ -82,6 +84,14 @@ function wellnessReducer(
       return { ...state, examContext: action.payload };
     case "CLEAR_EXAM_CONTEXT":
       return { ...state, examContext: null };
+    case "UPDATE_JOURNAL_INSIGHT": {
+      const journalEntries = state.journalEntries.map((e) =>
+        e.id === action.payload.id
+          ? { ...e, aiInsight: action.payload.aiInsight }
+          : e
+      );
+      return { ...state, journalEntries };
+    }
     case "HYDRATE":
       return {
         ...action.payload,
@@ -159,15 +169,20 @@ export function WellnessProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addJournalEntry = useCallback(
-    (entry: Omit<JournalEntry, "id" | "timestamp">) => {
+    (entry: Omit<JournalEntry, "id" | "timestamp">): string => {
+      const id = generateId();
       dispatch({
         type: "ADD_JOURNAL_ENTRY",
-        payload: {
-          ...entry,
-          id: generateId(),
-          timestamp: new Date().toISOString(),
-        },
+        payload: { ...entry, id, timestamp: new Date().toISOString() },
       });
+      return id;
+    },
+    []
+  );
+
+  const updateJournalInsight = useCallback(
+    (id: string, aiInsight: string) => {
+      dispatch({ type: "UPDATE_JOURNAL_INSIGHT", payload: { id, aiInsight } });
     },
     []
   );
@@ -197,6 +212,7 @@ export function WellnessProvider({ children }: { children: React.ReactNode }) {
       state,
       addMoodEntry,
       addJournalEntry,
+      updateJournalInsight,
       addChatMessage,
       setExamContext,
       clearExamContext,
@@ -206,6 +222,7 @@ export function WellnessProvider({ children }: { children: React.ReactNode }) {
       state,
       addMoodEntry,
       addJournalEntry,
+      updateJournalInsight,
       addChatMessage,
       setExamContext,
       clearExamContext,

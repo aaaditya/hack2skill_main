@@ -5,8 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { JournalEntrySchema, type JournalEntryInput } from "@/lib/validations";
 import type { MoodLevel, ExamStressTrigger } from "@/types";
-import { useWellnessStore } from "@/features/wellness/hooks/use-wellness-store";
-import { Button } from "@/components/ui/button";
+import { useWellnessStore } from "@/features/wellness/hooks/use-wellness-store";import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -41,7 +40,7 @@ const REFLECTION_PROMPTS = [
 ];
 
 export function JournalEntryForm() {
-  const { addJournalEntry, state } = useWellnessStore();
+  const { addJournalEntry, updateJournalInsight, state } = useWellnessStore();
   const [submitted, setSubmitted] = useState(false);
   const [promptIndex, setPromptIndex] = useState(0);
 
@@ -95,14 +94,36 @@ export function JournalEntryForm() {
 
   const onSubmit = useCallback(
     (data: JournalEntryInput) => {
-      addJournalEntry(data);
+      const entryId = addJournalEntry(data);
       setSubmitted(true);
+
+      // Fire background AI insight — does not block the success state
+      void fetch("/api/journal-insight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: data.title,
+          content: data.content,
+          mood: data.mood,
+          triggers: data.triggers,
+          examContext: state.examContext ?? null,
+        }),
+      })
+        .then((res) => (res.ok ? res.json() : Promise.reject()))
+        .then((result: unknown) => {
+          const insight = (result as { insight?: string }).insight;
+          if (insight) updateJournalInsight(entryId, insight);
+        })
+        .catch(() => {
+          // Insight is optional — silently ignore API failures
+        });
+
       setTimeout(() => {
         setSubmitted(false);
         reset();
       }, 2500);
     },
-    [addJournalEntry, reset]
+    [addJournalEntry, updateJournalInsight, reset, state.examContext]
   );
 
   const examLabel = state.examContext?.examType ?? "exam";

@@ -7,8 +7,16 @@ export type ExamType =
   | "CAT"
   | "GATE"
   | "UPSC"
-  | "Board Exams"
+  | "Class 12 Boards"
+  | "Class 10 Boards"
   | "Other";
+
+/**
+ * Lifecycle phase the student is in.
+ * - "preparing"          — actively studying before the exam
+ * - "awaiting_results"   — exam done; waiting for the result to be declared
+ */
+export type ExamPhase = "preparing" | "awaiting_results";
 
 export type ExamStressTrigger =
   | "mock_test_performance"
@@ -25,6 +33,7 @@ export type RiskLevel = "low" | "moderate" | "high" | "critical";
 export interface ExamContext {
   examType: ExamType;
   daysUntilExam: number;
+  phase: ExamPhase;
 }
 
 export interface MoodEntry {

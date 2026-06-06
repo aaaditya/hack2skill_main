@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       .join(", ");
 
     const examInfo = context?.examType
-      ? ` Preparing for: ${context.examType}.${context.daysUntilExam !== undefined ? ` Days until exam: ${context.daysUntilExam}.` : ""}`
+      ? ` ${context.phase === "awaiting_results" ? "Awaiting results for" : "Preparing for"}: ${context.examType}.${context.daysUntilExam !== undefined && context.phase !== "awaiting_results" ? ` ${context.daysUntilExam} days until exam.` : ""}`
       : "";
 
     const contextStr = context

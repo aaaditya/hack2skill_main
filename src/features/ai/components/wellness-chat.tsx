@@ -93,6 +93,7 @@ export function WellnessChat() {
       recentTriggers: recent?.triggers,
       examType: state.examContext?.examType,
       daysUntilExam: state.examContext?.daysUntilExam,
+      phase: state.examContext?.phase,
     };
   }, [state.moodEntries, state.examContext]);
 

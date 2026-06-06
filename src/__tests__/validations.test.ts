@@ -179,26 +179,59 @@ describe("JournalEntrySchema", () => {
 });
 
 describe("ExamContextSchema", () => {
+  const validContext = { examType: "NEET", daysUntilExam: 90, phase: "preparing" as const };
+
   it("accepts a valid exam context", () => {
-    const result = ExamContextSchema.safeParse({
-      examType: "NEET",
-      daysUntilExam: 90,
-    });
+    const result = ExamContextSchema.safeParse(validContext);
     expect(result.success).toBe(true);
   });
 
   it("accepts all valid exam types", () => {
-    const examTypes = ["NEET", "JEE", "CUET", "CAT", "GATE", "UPSC", "Board Exams", "Other"];
+    const examTypes = [
+      "NEET", "JEE", "CUET", "CAT", "GATE", "UPSC",
+      "Class 12 Boards", "Class 10 Boards", "Other",
+    ];
     for (const examType of examTypes) {
-      const result = ExamContextSchema.safeParse({ examType, daysUntilExam: 30 });
+      const result = ExamContextSchema.safeParse({
+        examType,
+        daysUntilExam: 30,
+        phase: "preparing",
+      });
       expect(result.success).toBe(true);
     }
+  });
+
+  it("rejects the old 'Board Exams' value now that it is split", () => {
+    const result = ExamContextSchema.safeParse({
+      examType: "Board Exams",
+      daysUntilExam: 30,
+      phase: "preparing",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts awaiting_results phase", () => {
+    const result = ExamContextSchema.safeParse({
+      examType: "Class 12 Boards",
+      daysUntilExam: 0,
+      phase: "awaiting_results",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid phase value", () => {
+    const result = ExamContextSchema.safeParse({
+      ...validContext,
+      phase: "finished",
+    });
+    expect(result.success).toBe(false);
   });
 
   it("accepts 0 days until exam (exam day)", () => {
     const result = ExamContextSchema.safeParse({
       examType: "JEE",
       daysUntilExam: 0,
+      phase: "preparing",
     });
     expect(result.success).toBe(true);
   });
@@ -207,6 +240,7 @@ describe("ExamContextSchema", () => {
     const result = ExamContextSchema.safeParse({
       examType: "NEET",
       daysUntilExam: -1,
+      phase: "preparing",
     });
     expect(result.success).toBe(false);
   });
@@ -215,6 +249,7 @@ describe("ExamContextSchema", () => {
     const result = ExamContextSchema.safeParse({
       examType: "UPSC",
       daysUntilExam: 731,
+      phase: "preparing",
     });
     expect(result.success).toBe(false);
   });
@@ -223,6 +258,7 @@ describe("ExamContextSchema", () => {
     const result = ExamContextSchema.safeParse({
       examType: "SAT",
       daysUntilExam: 60,
+      phase: "preparing",
     });
     expect(result.success).toBe(false);
   });
@@ -231,6 +267,7 @@ describe("ExamContextSchema", () => {
     const result = ExamContextSchema.safeParse({
       examType: "CAT",
       daysUntilExam: 30.5,
+      phase: "preparing",
     });
     expect(result.success).toBe(false);
   });
@@ -304,7 +341,7 @@ describe("WellnessInsightRequestSchema", () => {
     const result = WellnessInsightRequestSchema.safeParse({
       moodEntries: [],
       journalEntries: [],
-      examContext: { examType: "JEE", daysUntilExam: 60 },
+      examContext: { examType: "JEE", daysUntilExam: 60, phase: "preparing" },
     });
     expect(result.success).toBe(true);
   });

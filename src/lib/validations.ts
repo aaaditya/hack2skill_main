@@ -15,9 +15,12 @@ export const ExamTypeSchema = z.enum([
   "CAT",
   "GATE",
   "UPSC",
-  "Board Exams",
+  "Class 12 Boards",
+  "Class 10 Boards",
   "Other",
 ]);
+
+export const ExamPhaseSchema = z.enum(["preparing", "awaiting_results"]);
 
 export const ExamStressTriggerSchema = z.enum([
   "mock_test_performance",
@@ -37,6 +40,7 @@ export const ExamContextSchema = z.object({
     .int("Must be a whole number")
     .min(0, "Days cannot be negative")
     .max(730, "Must be within 2 years"),
+  phase: ExamPhaseSchema,
 });
 
 const MAX_NOTES_LENGTH = 500;
@@ -96,6 +100,7 @@ export const ChatMessageSchema = z.object({
       recentTriggers: z.array(ExamStressTriggerSchema).optional(),
       examType: ExamTypeSchema.optional(),
       daysUntilExam: z.number().int().min(0).max(730).optional(),
+      phase: ExamPhaseSchema.optional(),
     })
     .optional(),
 });
@@ -166,5 +171,14 @@ export const ResultsAnxietyRequestSchema = z.object({
   daysUntilExam: z.number().int().min(0).max(730).optional(),
 });
 
+export const JournalInsightRequestSchema = z.object({
+  title: z.string().max(100),
+  content: z.string().min(10).max(2000),
+  mood: MoodLevelSchema,
+  triggers: z.array(ExamStressTriggerSchema).max(8),
+  examContext: ExamContextSchema.nullable().optional(),
+});
+
 export type TriggerAnalysisRequest = z.infer<typeof TriggerAnalysisRequestSchema>;
 export type ResultsAnxietyRequest = z.infer<typeof ResultsAnxietyRequestSchema>;
+export type JournalInsightRequestInput = z.infer<typeof JournalInsightRequestSchema>;

@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ExamContextSchema, type ExamContextInput } from "@/lib/validations";
-import type { ExamType } from "@/types";
+import type { ExamType, ExamPhase } from "@/types";
 import { useWellnessStore } from "@/features/wellness/hooks/use-wellness-store";
 import {
   Card,
@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GraduationCap, Pencil } from "lucide-react";
+import { GraduationCap, Pencil, BookOpen, Clock } from "lucide-react";
 import { formatDaysUntilExam } from "@/lib/wellness";
 
 const EXAM_TYPES: ExamType[] = [
@@ -26,7 +26,8 @@ const EXAM_TYPES: ExamType[] = [
   "CAT",
   "GATE",
   "UPSC",
-  "Board Exams",
+  "Class 12 Boards",
+  "Class 10 Boards",
   "Other",
 ];
 
@@ -37,9 +38,30 @@ const EXAM_DESCRIPTIONS: Record<ExamType, string> = {
   CAT: "MBA entrance",
   GATE: "Graduate engineering",
   UPSC: "Civil services",
-  "Board Exams": "10th / 12th boards",
+  "Class 12 Boards": "12th standard boards",
+  "Class 10 Boards": "10th standard boards",
   Other: "Other competitive exam",
 };
+
+const PHASE_OPTIONS: Array<{
+  value: ExamPhase;
+  label: string;
+  sublabel: string;
+  icon: typeof BookOpen;
+}> = [
+  {
+    value: "preparing",
+    label: "Preparing",
+    sublabel: "Exam is coming up",
+    icon: BookOpen,
+  },
+  {
+    value: "awaiting_results",
+    label: "Awaiting Results",
+    sublabel: "Exam done, waiting",
+    icon: Clock,
+  },
+];
 
 interface ExamContextSetupProps {
   compact?: boolean;
@@ -60,10 +82,12 @@ export function ExamContextSetup({ compact = false }: ExamContextSetupProps) {
     defaultValues: {
       examType: examContext?.examType ?? "NEET",
       daysUntilExam: examContext?.daysUntilExam ?? 90,
+      phase: examContext?.phase ?? "preparing",
     },
   });
 
   const selectedExam = watch("examType");
+  const selectedPhase = watch("phase");
 
   const onSubmit = useCallback(
     (data: ExamContextInput) => {
@@ -73,10 +97,12 @@ export function ExamContextSetup({ compact = false }: ExamContextSetupProps) {
   );
 
   if (examContext && compact) {
+    const phaseLabel =
+      examContext.phase === "awaiting_results" ? "Awaiting results" : "Preparing";
     return (
       <div
         className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3"
-        aria-label={`Exam context: ${examContext.examType}, ${formatDaysUntilExam(examContext.daysUntilExam)} remaining`}
+        aria-label={`Exam context: ${examContext.examType}, ${phaseLabel}, ${formatDaysUntilExam(examContext.daysUntilExam)} remaining`}
       >
         <div className="flex items-center gap-3">
           <GraduationCap className="h-5 w-5 text-primary shrink-0" aria-hidden="true" />
@@ -85,7 +111,9 @@ export function ExamContextSetup({ compact = false }: ExamContextSetupProps) {
               {examContext.examType}
             </p>
             <p className="text-xs text-muted-foreground">
-              {formatDaysUntilExam(examContext.daysUntilExam)} until exam
+              {phaseLabel}
+              {examContext.phase === "preparing" &&
+                ` · ${formatDaysUntilExam(examContext.daysUntilExam)} until exam`}
             </p>
           </div>
         </div>
@@ -110,12 +138,12 @@ export function ExamContextSetup({ compact = false }: ExamContextSetupProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <GraduationCap className="h-5 w-5" aria-hidden="true" />
-          {examContext ? "Update Exam Details" : "Set Your Exam Target"}
+          {examContext ? "Update Exam Details" : "Set Your Exam"}
         </CardTitle>
         <CardDescription>
           {examContext
-            ? "Update your exam so insights stay relevant."
-            : "Tell us which exam you're preparing for so every insight is tailored to your preparation."}
+            ? "Update your exam details so all insights stay relevant."
+            : "Tell us your exam and where you are in the journey — every insight is tailored to your situation."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -130,7 +158,7 @@ export function ExamContextSetup({ compact = false }: ExamContextSetupProps) {
               Which exam are you preparing for?
             </legend>
             <div
-              className="grid grid-cols-2 sm:grid-cols-4 gap-2"
+              className="grid grid-cols-2 sm:grid-cols-3 gap-2"
               role="group"
               aria-label="Exam type selection"
             >
@@ -160,44 +188,87 @@ export function ExamContextSetup({ compact = false }: ExamContextSetupProps) {
             </div>
           </fieldset>
 
-          <div>
-            <Label htmlFor="daysUntilExam">Days Until Exam</Label>
-            <div className="flex items-center gap-3 mt-1">
-              <Input
-                id="daysUntilExam"
-                type="number"
-                min={0}
-                max={730}
-                className="w-32"
-                aria-describedby={
-                  errors.daysUntilExam ? "days-error" : "days-hint"
-                }
-                {...register("daysUntilExam", { valueAsNumber: true })}
-              />
-              <span
-                id="days-hint"
-                className="text-sm text-muted-foreground"
-                aria-live="polite"
-              >
-                {watch("daysUntilExam") > 0
-                  ? `= ${formatDaysUntilExam(watch("daysUntilExam"))} to go`
-                  : "Exam day!"}
-              </span>
+          <fieldset>
+            <legend className="text-sm font-medium mb-2">
+              Where are you in the journey?
+            </legend>
+            <div
+              className="grid grid-cols-2 gap-3"
+              role="group"
+              aria-label="Exam phase selection"
+            >
+              {PHASE_OPTIONS.map(({ value, label, sublabel, icon: Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setValue("phase", value, { shouldValidate: true })}
+                  aria-pressed={selectedPhase === value}
+                  aria-label={`${label}: ${sublabel}`}
+                  className={`
+                    flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+                    ${
+                      selectedPhase === value
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/40 hover:bg-accent"
+                    }
+                  `}
+                >
+                  <Icon
+                    className={`h-5 w-5 shrink-0 ${selectedPhase === value ? "text-primary" : "text-muted-foreground"}`}
+                    aria-hidden="true"
+                  />
+                  <div>
+                    <p className={`text-sm font-semibold ${selectedPhase === value ? "text-primary" : ""}`}>
+                      {label}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{sublabel}</p>
+                  </div>
+                </button>
+              ))}
             </div>
-            {errors.daysUntilExam && (
-              <p
-                id="days-error"
-                className="mt-1 text-xs text-destructive"
-                role="alert"
-              >
-                {errors.daysUntilExam.message}
-              </p>
-            )}
-          </div>
+          </fieldset>
+
+          {selectedPhase === "preparing" && (
+            <div>
+              <Label htmlFor="daysUntilExam">Days Until Exam</Label>
+              <div className="flex items-center gap-3 mt-1">
+                <Input
+                  id="daysUntilExam"
+                  type="number"
+                  min={0}
+                  max={730}
+                  className="w-32"
+                  aria-describedby={
+                    errors.daysUntilExam ? "days-error" : "days-hint"
+                  }
+                  {...register("daysUntilExam", { valueAsNumber: true })}
+                />
+                <span
+                  id="days-hint"
+                  className="text-sm text-muted-foreground"
+                  aria-live="polite"
+                >
+                  {watch("daysUntilExam") > 0
+                    ? `= ${formatDaysUntilExam(watch("daysUntilExam"))} to go`
+                    : "Exam day!"}
+                </span>
+              </div>
+              {errors.daysUntilExam && (
+                <p
+                  id="days-error"
+                  className="mt-1 text-xs text-destructive"
+                  role="alert"
+                >
+                  {errors.daysUntilExam.message}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3">
             <Button type="submit" disabled={isSubmitting} className="flex-1">
-              {examContext ? "Update Exam" : "Set Exam Target"}
+              {examContext ? "Update" : "Set Exam"}
             </Button>
             {examContext && (
               <Button

@@ -192,7 +192,7 @@ describe("calculateExamReadiness", () => {
       journalFrequency: 20,
       trend: "stable" as const,
     };
-    const examContext: ExamContext = { examType: "NEET", daysUntilExam: 2 };
+    const examContext: ExamContext = { examType: "NEET", daysUntilExam: 2, phase: "preparing" };
     const readiness = calculateExamReadiness(
       wellnessScore,
       [],
@@ -219,7 +219,7 @@ describe("calculateExamReadiness", () => {
   });
 
   it("includes exam context in readiness result", () => {
-    const examContext: ExamContext = { examType: "JEE", daysUntilExam: 45 };
+    const examContext: ExamContext = { examType: "JEE", daysUntilExam: 45, phase: "preparing" };
     const readiness = calculateExamReadiness(null, [], [], examContext);
     expect(readiness.examType).toBe("JEE");
     expect(readiness.examDaysRemaining).toBe(45);

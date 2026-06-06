@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Brain, BookOpen, MessageCircle, BarChart3, ArrowRight, GraduationCap } from "lucide-react";
 
-const EXAM_BADGES = ["NEET", "JEE", "CUET", "CAT", "GATE", "UPSC", "Board Exams"];
+const EXAM_BADGES = ["NEET", "JEE", "CUET", "CAT", "GATE", "UPSC", "Class 12 Boards", "Class 10 Boards"];
 
 const FEATURES = [
   {
