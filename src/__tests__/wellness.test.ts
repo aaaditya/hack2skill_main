@@ -1,5 +1,5 @@
-import { calculateWellnessScore, getMoodLabel, getAnxietyLabel } from "@/lib/wellness";
-import type { MoodEntry, JournalEntry } from "@/types";
+import { calculateWellnessScore, getMoodLabel, getAnxietyLabel, calculateExamReadiness } from "@/lib/wellness";
+import type { MoodEntry, JournalEntry, ExamContext } from "@/types";
 
 function makeMoodEntry(
   overrides: Partial<MoodEntry> & { daysAgo?: number } = {}
@@ -64,13 +64,20 @@ describe("calculateWellnessScore", () => {
   });
 
   it("ignores entries older than 7 days", () => {
-    const oldEntry = makeMoodEntry({ moodLevel: 5, energyLevel: 5, anxietyLevel: 1, daysAgo: 8 });
+    const oldEntry = makeMoodEntry({
+      moodLevel: 5,
+      energyLevel: 5,
+      anxietyLevel: 1,
+      daysAgo: 8,
+    });
     const score = calculateWellnessScore([oldEntry], []);
     expect(score.overall).toBe(0);
   });
 
   it("includes journal activity in score calculation", () => {
-    const moodEntries = [makeMoodEntry({ moodLevel: 3, energyLevel: 3, anxietyLevel: 3 })];
+    const moodEntries = [
+      makeMoodEntry({ moodLevel: 3, energyLevel: 3, anxietyLevel: 3 }),
+    ];
     const scoreWithoutJournal = calculateWellnessScore(moodEntries, []);
     const journalEntries = [1, 2, 3, 4, 5].map(() => makeJournalEntry());
     const scoreWithJournal = calculateWellnessScore(moodEntries, journalEntries);
@@ -121,9 +128,101 @@ describe("calculateWellnessScore", () => {
   });
 
   it("overall score is always non-negative", () => {
-    const entries = [makeMoodEntry({ moodLevel: 1, energyLevel: 1, anxietyLevel: 5 })];
+    const entries = [
+      makeMoodEntry({ moodLevel: 1, energyLevel: 1, anxietyLevel: 5 }),
+    ];
     const score = calculateWellnessScore(entries, []);
     expect(score.overall).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("calculateExamReadiness", () => {
+  it("returns low risk with no data", () => {
+    const readiness = calculateExamReadiness(null, [], [], null);
+    expect(readiness.riskLevel).toBe("low");
+    expect(readiness.dominantTrigger).toBeNull();
+    expect(readiness.examType).toBeNull();
+  });
+
+  it("returns low risk for high wellness score", () => {
+    const wellnessScore = {
+      overall: 80,
+      moodAverage: 4,
+      energyAverage: 4,
+      anxietyAverage: 2,
+      journalFrequency: 60,
+      trend: "stable" as const,
+    };
+    const readiness = calculateExamReadiness(wellnessScore, [], [], null);
+    expect(readiness.riskLevel).toBe("low");
+  });
+
+  it("returns critical risk for very low wellness score", () => {
+    const wellnessScore = {
+      overall: 25,
+      moodAverage: 1.5,
+      energyAverage: 1.5,
+      anxietyAverage: 4.5,
+      journalFrequency: 0,
+      trend: "declining" as const,
+    };
+    const readiness = calculateExamReadiness(wellnessScore, [], [], null);
+    expect(readiness.riskLevel).toBe("critical");
+  });
+
+  it("returns high risk for low-moderate wellness score", () => {
+    const wellnessScore = {
+      overall: 38,
+      moodAverage: 2,
+      energyAverage: 2.5,
+      anxietyAverage: 3.5,
+      journalFrequency: 0,
+      trend: "stable" as const,
+    };
+    const readiness = calculateExamReadiness(wellnessScore, [], [], null);
+    expect(readiness.riskLevel).toBe("high");
+  });
+
+  it("escalates risk to critical when exam is very close and anxiety is high", () => {
+    const wellnessScore = {
+      overall: 55,
+      moodAverage: 3,
+      energyAverage: 3,
+      anxietyAverage: 4,
+      journalFrequency: 20,
+      trend: "stable" as const,
+    };
+    const examContext: ExamContext = { examType: "NEET", daysUntilExam: 2 };
+    const readiness = calculateExamReadiness(
+      wellnessScore,
+      [],
+      [],
+      examContext
+    );
+    expect(readiness.riskLevel).toBe("critical");
+  });
+
+  it("identifies dominant trigger from mood entries", () => {
+    const moodEntries = [
+      makeMoodEntry({ triggers: ["mock_test_performance", "revision_pressure"] }),
+      makeMoodEntry({ triggers: ["mock_test_performance"] }),
+      makeMoodEntry({ triggers: ["syllabus_backlog"] }),
+    ];
+    const wellnessScore = calculateWellnessScore(moodEntries, []);
+    const readiness = calculateExamReadiness(
+      wellnessScore,
+      moodEntries,
+      [],
+      null
+    );
+    expect(readiness.dominantTrigger).toBe("mock_test_performance");
+  });
+
+  it("includes exam context in readiness result", () => {
+    const examContext: ExamContext = { examType: "JEE", daysUntilExam: 45 };
+    const readiness = calculateExamReadiness(null, [], [], examContext);
+    expect(readiness.examType).toBe("JEE");
+    expect(readiness.examDaysRemaining).toBe(45);
   });
 });
 

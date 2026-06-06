@@ -4,14 +4,20 @@ import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MoodEntrySchema, type MoodEntryInput } from "@/lib/validations";
-import type { MoodLevel, StressTriggerCategory } from "@/types";
+import type { MoodLevel, ExamStressTrigger } from "@/types";
 import { useWellnessStore } from "@/features/wellness/hooks/use-wellness-store";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { CheckCircle, Loader2 } from "lucide-react";
-import { getMoodLabel, getAnxietyLabel } from "@/lib/wellness";
+import { getMoodLabel, getAnxietyLabel, EXAM_TRIGGER_LABELS } from "@/lib/wellness";
 
 const MOOD_EMOJI: Record<MoodLevel, string> = {
   1: "😞",
@@ -29,16 +35,7 @@ const ENERGY_EMOJI: Record<MoodLevel, string> = {
   5: "🚀",
 };
 
-const TRIGGER_LABELS: Record<StressTriggerCategory, string> = {
-  academic: "Academic",
-  social: "Social",
-  financial: "Financial",
-  health: "Health",
-  family: "Family",
-  other: "Other",
-};
-
-const TRIGGER_CATEGORIES = Object.keys(TRIGGER_LABELS) as StressTriggerCategory[];
+const EXAM_TRIGGERS = Object.keys(EXAM_TRIGGER_LABELS) as ExamStressTrigger[];
 
 interface MoodScaleProps {
   id: string;
@@ -100,7 +97,7 @@ function MoodScale({
 }
 
 export function MoodTrackerForm() {
-  const { addMoodEntry } = useWellnessStore();
+  const { addMoodEntry, state } = useWellnessStore();
   const [submitted, setSubmitted] = useState(false);
 
   const {
@@ -127,7 +124,7 @@ export function MoodTrackerForm() {
   const selectedTriggers = watch("triggers");
 
   const toggleTrigger = useCallback(
-    (trigger: StressTriggerCategory) => {
+    (trigger: ExamStressTrigger) => {
       const current = selectedTriggers ?? [];
       const next = current.includes(trigger)
         ? current.filter((t) => t !== trigger)
@@ -149,15 +146,23 @@ export function MoodTrackerForm() {
     [addMoodEntry, reset]
   );
 
+  const examLabel = state.examContext
+    ? `${state.examContext.examType} prep`
+    : "exam prep";
+
   if (submitted) {
     return (
-      <Card className="border-green-200 bg-green-50" role="status" aria-live="polite">
+      <Card
+        className="border-green-200 bg-green-50"
+        role="status"
+        aria-live="polite"
+      >
         <CardContent className="flex flex-col items-center gap-3 py-12">
           <CheckCircle className="h-12 w-12 text-green-600" aria-hidden="true" />
           <h2 className="text-lg font-semibold text-green-800">Check-in saved!</h2>
           <p className="text-sm text-green-700">
-            Your mood has been recorded. Head to the dashboard to see your wellness
-            trends.
+            Your mood has been recorded. Head to the dashboard to see your exam
+            readiness trends.
           </p>
         </CardContent>
       </Card>
@@ -167,10 +172,10 @@ export function MoodTrackerForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>How are you feeling?</CardTitle>
+        <CardTitle>How are you feeling today?</CardTitle>
         <CardDescription>
-          Take a moment to check in with yourself. All entries are private and
-          stored locally.
+          Track how {examLabel} is affecting your wellbeing. All entries are
+          private and stored locally.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -185,7 +190,7 @@ export function MoodTrackerForm() {
             value={moodLevel}
             onChange={(v) => setValue("moodLevel", v, { shouldValidate: true })}
             label="Overall Mood"
-            description="How are you feeling overall?"
+            description="How are you feeling today?"
             getLabel={getMoodLabel}
             emojiMap={MOOD_EMOJI}
           />
@@ -193,9 +198,11 @@ export function MoodTrackerForm() {
           <MoodScale
             id="energy"
             value={energyLevel}
-            onChange={(v) => setValue("energyLevel", v, { shouldValidate: true })}
-            label="Energy Level"
-            description="How energized do you feel?"
+            onChange={(v) =>
+              setValue("energyLevel", v, { shouldValidate: true })
+            }
+            label="Study Energy"
+            description="How energized do you feel for studying?"
             getLabel={getMoodLabel}
             emojiMap={ENERGY_EMOJI}
           />
@@ -203,9 +210,11 @@ export function MoodTrackerForm() {
           <MoodScale
             id="anxiety"
             value={anxietyLevel}
-            onChange={(v) => setValue("anxietyLevel", v, { shouldValidate: true })}
-            label="Anxiety Level"
-            description="How anxious or stressed do you feel?"
+            onChange={(v) =>
+              setValue("anxietyLevel", v, { shouldValidate: true })
+            }
+            label="Exam Anxiety"
+            description="How much exam-related stress are you feeling?"
             getLabel={getAnxietyLabel}
             emojiMap={{
               1: "😌",
@@ -217,10 +226,13 @@ export function MoodTrackerForm() {
           />
 
           <div>
-            <p className="text-sm font-medium mb-2" id="triggers-label">
-              Stress Triggers{" "}
+            <p
+              className="text-sm font-medium mb-2"
+              id="triggers-label"
+            >
+              What&apos;s affecting you most?{" "}
               <span className="text-muted-foreground font-normal">
-                — What&apos;s affecting you? (optional)
+                (optional — select all that apply)
               </span>
             </p>
             <div
@@ -228,7 +240,7 @@ export function MoodTrackerForm() {
               role="group"
               aria-labelledby="triggers-label"
             >
-              {TRIGGER_CATEGORIES.map((trigger) => (
+              {EXAM_TRIGGERS.map((trigger) => (
                 <button
                   key={trigger}
                   type="button"
@@ -244,12 +256,15 @@ export function MoodTrackerForm() {
                     }
                   `}
                 >
-                  {TRIGGER_LABELS[trigger]}
+                  {EXAM_TRIGGER_LABELS[trigger]}
                 </button>
               ))}
             </div>
             {errors.triggers && (
-              <p className="mt-1 text-xs text-destructive" role="alert">
+              <p
+                className="mt-1 text-xs text-destructive"
+                role="alert"
+              >
                 {errors.triggers.message}
               </p>
             )}
@@ -258,11 +273,13 @@ export function MoodTrackerForm() {
           <div>
             <Label htmlFor="notes">
               Notes{" "}
-              <span className="text-muted-foreground font-normal">(optional)</span>
+              <span className="text-muted-foreground font-normal">
+                (optional — what happened in your study session?)
+              </span>
             </Label>
             <Textarea
               id="notes"
-              placeholder="Anything on your mind? (max 500 characters)"
+              placeholder="e.g. Struggled with organic chemistry chapter, mock test score dropped..."
               className="mt-1 resize-none"
               rows={3}
               maxLength={500}
@@ -270,7 +287,11 @@ export function MoodTrackerForm() {
               {...register("notes")}
             />
             {errors.notes && (
-              <p id="notes-error" className="mt-1 text-xs text-destructive" role="alert">
+              <p
+                id="notes-error"
+                className="mt-1 text-xs text-destructive"
+                role="alert"
+              >
                 {errors.notes.message}
               </p>
             )}
@@ -279,7 +300,10 @@ export function MoodTrackerForm() {
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <Loader2
+                  className="h-4 w-4 animate-spin"
+                  aria-hidden="true"
+                />
                 <span>Saving...</span>
               </>
             ) : (

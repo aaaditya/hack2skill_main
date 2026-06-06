@@ -30,6 +30,7 @@ export function WellnessInsightPanel() {
         body: JSON.stringify({
           moodEntries: state.moodEntries.slice(0, 7),
           journalEntries: state.journalEntries.slice(0, 3),
+          examContext: state.examContext ?? null,
         }),
       });
 
@@ -40,7 +41,7 @@ export function WellnessInsightPanel() {
         );
       }
 
-      const data = await response.json() as { insight: WellnessInsight };
+      const data = (await response.json()) as { insight: WellnessInsight };
       setInsight(data.insight);
     } catch (err) {
       setError(
@@ -49,25 +50,30 @@ export function WellnessInsightPanel() {
     } finally {
       setIsLoading(false);
     }
-  }, [state.moodEntries, state.journalEntries]);
+  }, [state.moodEntries, state.journalEntries, state.examContext]);
 
   const hasData = state.moodEntries.length > 0;
+  const examLabel = state.examContext?.examType
+    ? `your ${state.examContext.examType} preparation`
+    : "your exam preparation";
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Lightbulb className="h-5 w-5" aria-hidden="true" />
-          AI Wellness Insight
+          AI Exam Wellness Insight
         </CardTitle>
         <CardDescription>
-          Personalized analysis of your mood patterns and stress triggers
+          Personalized analysis of how exam pressure is affecting your wellbeing
+          and study performance
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {!hasData && (
           <p className="text-sm text-muted-foreground text-center py-2">
-            Add mood check-ins to unlock AI-powered insights.
+            Add mood check-ins to unlock AI-powered insights about{" "}
+            {examLabel}.
           </p>
         )}
 
@@ -77,7 +83,10 @@ export function WellnessInsightPanel() {
             role="alert"
             aria-live="assertive"
           >
-            <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" aria-hidden="true" />
+            <AlertCircle
+              className="h-4 w-4 text-destructive shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
@@ -94,14 +103,11 @@ export function WellnessInsightPanel() {
                   id="suggestions-heading"
                   className="text-sm font-semibold mb-2 text-green-700"
                 >
-                  Suggestions
+                  Study Wellness Tips
                 </h3>
                 <ul className="space-y-1.5">
                   {insight.suggestions.map((s, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-2 text-sm"
-                    >
+                    <li key={i} className="flex items-start gap-2 text-sm">
                       <span
                         className="shrink-0 text-green-600 mt-0.5"
                         aria-hidden="true"
@@ -121,14 +127,11 @@ export function WellnessInsightPanel() {
                   id="triggers-heading"
                   className="text-sm font-semibold mb-2 text-orange-700"
                 >
-                  Identified Stressors
+                  Exam Stressors Identified
                 </h3>
                 <ul className="space-y-1.5">
                   {insight.triggers.map((t, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-2 text-sm"
-                    >
+                    <li key={i} className="flex items-start gap-2 text-sm">
                       <span
                         className="shrink-0 text-orange-500 mt-0.5"
                         aria-hidden="true"
@@ -148,14 +151,11 @@ export function WellnessInsightPanel() {
                   id="positives-heading"
                   className="text-sm font-semibold mb-2 text-blue-700"
                 >
-                  What&apos;s Going Well
+                  Preparation Strengths
                 </h3>
                 <ul className="space-y-1.5">
                   {insight.positives.map((p, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-2 text-sm"
-                    >
+                    <li key={i} className="flex items-start gap-2 text-sm">
                       <span
                         className="shrink-0 text-blue-500 mt-0.5"
                         aria-hidden="true"
@@ -175,12 +175,19 @@ export function WellnessInsightPanel() {
           onClick={fetchInsight}
           disabled={isLoading || !hasData}
           className="w-full"
-          aria-label={insight ? "Refresh wellness insight" : "Generate wellness insight"}
+          aria-label={
+            insight
+              ? "Refresh exam wellness insight"
+              : "Generate exam wellness insight"
+          }
         >
           {isLoading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              <span>Analyzing your data...</span>
+              <Loader2
+                className="h-4 w-4 animate-spin"
+                aria-hidden="true"
+              />
+              <span>Analyzing exam preparation data...</span>
             </>
           ) : insight ? (
             <>
@@ -188,7 +195,7 @@ export function WellnessInsightPanel() {
               <span>Refresh Insight</span>
             </>
           ) : (
-            "Generate Wellness Insight"
+            "Generate Exam Wellness Insight"
           )}
         </Button>
       </CardContent>

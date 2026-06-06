@@ -9,8 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatTimestamp, getMoodLabel } from "@/lib/wellness";
-import type { JournalEntry } from "@/types";
+import { formatTimestamp, getMoodLabel, EXAM_TRIGGER_LABELS } from "@/lib/wellness";
+import type { JournalEntry, ExamStressTrigger } from "@/types";
 import { BookOpen, CalendarDays } from "lucide-react";
 
 function JournalCard({ entry }: { entry: JournalEntry }) {
@@ -30,22 +30,21 @@ function JournalCard({ entry }: { entry: JournalEntry }) {
         </time>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <span
           className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary"
           aria-label={`Mood: ${getMoodLabel(entry.mood)}`}
         >
           {getMoodLabel(entry.mood)}
         </span>
-        {entry.triggers.length > 0 &&
-          entry.triggers.map((t) => (
-            <span
-              key={t}
-              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-muted text-muted-foreground"
-            >
-              {t}
-            </span>
-          ))}
+        {entry.triggers.map((t) => (
+          <span
+            key={t}
+            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-muted text-muted-foreground"
+          >
+            {EXAM_TRIGGER_LABELS[t as ExamStressTrigger] ?? t}
+          </span>
+        ))}
       </div>
 
       <p className="text-sm text-muted-foreground line-clamp-3">
@@ -57,9 +56,7 @@ function JournalCard({ entry }: { entry: JournalEntry }) {
           className="rounded-md bg-primary/5 border border-primary/20 p-3 mt-2"
           aria-label="AI insight for this entry"
         >
-          <p className="text-xs font-semibold text-primary mb-1">
-            AI Insight
-          </p>
+          <p className="text-xs font-semibold text-primary mb-1">AI Insight</p>
           <p className="text-xs text-foreground">{entry.aiInsight}</p>
         </div>
       )}
@@ -80,13 +77,13 @@ export function JournalList() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5" aria-hidden="true" />
-            Journal History
+            Reflection History
           </CardTitle>
-          <CardDescription>Your reflections will appear here.</CardDescription>
+          <CardDescription>Your study reflections will appear here.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-8">
-            No journal entries yet. Write your first reflection above!
+            No entries yet. Write your first study reflection above!
           </p>
         </CardContent>
       </Card>
@@ -102,7 +99,7 @@ export function JournalList() {
             className="flex items-center gap-2"
           >
             <BookOpen className="h-5 w-5" aria-hidden="true" />
-            Recent Entries
+            Recent Reflections
           </CardTitle>
           <CardDescription>
             Your last {entries.length} journal entries

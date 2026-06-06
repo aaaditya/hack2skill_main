@@ -9,18 +9,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getMoodLabel, getAnxietyLabel, formatTimestamp } from "@/lib/wellness";
-import type { MoodEntry, StressTriggerCategory } from "@/types";
+import {
+  getMoodLabel,
+  getAnxietyLabel,
+  formatTimestamp,
+  EXAM_TRIGGER_LABELS,
+  EXAM_TRIGGER_COLORS,
+} from "@/lib/wellness";
+import type { MoodEntry, ExamStressTrigger } from "@/types";
 import { CalendarDays } from "lucide-react";
-
-const TRIGGER_COLORS: Record<StressTriggerCategory, string> = {
-  academic: "bg-blue-100 text-blue-800",
-  social: "bg-purple-100 text-purple-800",
-  financial: "bg-yellow-100 text-yellow-800",
-  health: "bg-red-100 text-red-800",
-  family: "bg-green-100 text-green-800",
-  other: "bg-gray-100 text-gray-800",
-};
 
 function MoodEntryCard({ entry }: { entry: MoodEntry }) {
   return (
@@ -60,23 +57,25 @@ function MoodEntryCard({ entry }: { entry: MoodEntry }) {
       </dl>
 
       {entry.triggers.length > 0 && (
-        <div
-          className="flex flex-wrap gap-1"
-          aria-label="Stress triggers"
-        >
-          {entry.triggers.map((trigger) => (
-            <span
-              key={trigger}
-              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${TRIGGER_COLORS[trigger]}`}
-            >
-              {trigger}
-            </span>
-          ))}
+        <div className="flex flex-wrap gap-1" aria-label="Exam stress triggers">
+          {entry.triggers.map((trigger) => {
+            const colors = EXAM_TRIGGER_COLORS[trigger as ExamStressTrigger];
+            return (
+              <span
+                key={trigger}
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors.bg} ${colors.text}`}
+              >
+                {EXAM_TRIGGER_LABELS[trigger as ExamStressTrigger]}
+              </span>
+            );
+          })}
         </div>
       )}
 
       {entry.notes && (
-        <p className="text-sm text-muted-foreground italic">&ldquo;{entry.notes}&rdquo;</p>
+        <p className="text-sm text-muted-foreground italic">
+          &ldquo;{entry.notes}&rdquo;
+        </p>
       )}
     </article>
   );
@@ -93,12 +92,12 @@ export function MoodHistory() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Mood History</CardTitle>
-          <CardDescription>Your recent check-ins will appear here.</CardDescription>
+          <CardTitle>Check-in History</CardTitle>
+          <CardDescription>Your recent mood entries will appear here.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-8">
-            No check-ins yet. Complete your first mood check-in above!
+            No check-ins yet. Record your first mood check-in above!
           </p>
         </CardContent>
       </Card>

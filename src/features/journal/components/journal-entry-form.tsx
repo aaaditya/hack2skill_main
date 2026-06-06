@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { JournalEntrySchema, type JournalEntryInput } from "@/lib/validations";
-import type { MoodLevel, StressTriggerCategory } from "@/types";
+import type { MoodLevel, ExamStressTrigger } from "@/types";
 import { useWellnessStore } from "@/features/wellness/hooks/use-wellness-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EXAM_TRIGGER_LABELS } from "@/lib/wellness";
 import { CheckCircle, Loader2, Sparkles } from "lucide-react";
 
 const MOOD_OPTIONS: Array<{ value: MoodLevel; label: string; emoji: string }> = [
@@ -27,27 +28,20 @@ const MOOD_OPTIONS: Array<{ value: MoodLevel; label: string; emoji: string }> = 
   { value: 5, label: "Excellent", emoji: "😄" },
 ];
 
-const TRIGGER_LABELS: Record<StressTriggerCategory, string> = {
-  academic: "Academic",
-  social: "Social",
-  financial: "Financial",
-  health: "Health",
-  family: "Family",
-  other: "Other",
-};
-
-const TRIGGER_CATEGORIES = Object.keys(TRIGGER_LABELS) as StressTriggerCategory[];
+const EXAM_TRIGGERS = Object.keys(EXAM_TRIGGER_LABELS) as ExamStressTrigger[];
 
 const REFLECTION_PROMPTS = [
-  "What challenged you most today and how did you respond?",
-  "What are you grateful for right now, even if small?",
-  "Describe a moment when you felt capable and strong.",
-  "What emotions came up unexpectedly today?",
-  "What does your body feel like right now?",
+  "What study topic challenged me the most today and why?",
+  "How did I feel before and after my revision session today?",
+  "What would I do differently in tomorrow's study schedule?",
+  "What is one thing I understood well today that I can build on?",
+  "How is exam pressure affecting my daily routine and sleep?",
+  "What am I most anxious about and what can I control vs. not?",
+  "Describe a moment today when I felt confident in my preparation.",
 ];
 
 export function JournalEntryForm() {
-  const { addJournalEntry } = useWellnessStore();
+  const { addJournalEntry, state } = useWellnessStore();
   const [submitted, setSubmitted] = useState(false);
   const [promptIndex, setPromptIndex] = useState(0);
 
@@ -73,7 +67,7 @@ export function JournalEntryForm() {
   const contentValue = watch("content");
 
   const toggleTrigger = useCallback(
-    (trigger: StressTriggerCategory) => {
+    (trigger: ExamStressTrigger) => {
       const current = selectedTriggers ?? [];
       const next = current.includes(trigger)
         ? current.filter((t) => t !== trigger)
@@ -111,6 +105,8 @@ export function JournalEntryForm() {
     [addJournalEntry, reset]
   );
 
+  const examLabel = state.examContext?.examType ?? "exam";
+
   if (submitted) {
     return (
       <Card
@@ -119,12 +115,16 @@ export function JournalEntryForm() {
         aria-live="polite"
       >
         <CardContent className="flex flex-col items-center gap-3 py-12">
-          <CheckCircle className="h-12 w-12 text-green-600" aria-hidden="true" />
+          <CheckCircle
+            className="h-12 w-12 text-green-600"
+            aria-hidden="true"
+          />
           <h2 className="text-lg font-semibold text-green-800">
             Journal entry saved!
           </h2>
           <p className="text-sm text-green-700">
-            Great job reflecting. Visit your dashboard for AI-powered insights.
+            Great job reflecting. Visit your dashboard for exam-focused AI
+            insights.
           </p>
         </CardContent>
       </Card>
@@ -134,31 +134,35 @@ export function JournalEntryForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>New Journal Entry</CardTitle>
+        <CardTitle>Study Reflection</CardTitle>
         <CardDescription>
-          Reflect on your day, emotions, and experiences. Regular journaling helps
-          identify patterns and build resilience.
+          Reflect on your {examLabel} preparation. Regular journaling helps
+          you understand your stress patterns and study more effectively.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form
           onSubmit={handleSubmit(onSubmit)}
           noValidate
-          aria-label="Journal entry form"
+          aria-label="Study reflection journal form"
           className="space-y-5"
         >
           <div>
             <Label htmlFor="title">Entry Title</Label>
             <Input
               id="title"
-              placeholder="What's this entry about?"
+              placeholder="e.g. Post mock test reflection, Syllabus anxiety day..."
               className="mt-1"
               maxLength={100}
               aria-describedby={errors.title ? "title-error" : undefined}
               {...register("title")}
             />
             {errors.title && (
-              <p id="title-error" className="mt-1 text-xs text-destructive" role="alert">
+              <p
+                id="title-error"
+                className="mt-1 text-xs text-destructive"
+                role="alert"
+              >
                 {errors.title.message}
               </p>
             )}
@@ -195,16 +199,22 @@ export function JournalEntryForm() {
             </p>
             <Textarea
               id="content"
-              placeholder="Write freely about your thoughts and feelings..."
+              placeholder="Write about your study session, how you're coping with exam pressure, what's on your mind..."
               className="mt-1 resize-none"
               rows={6}
               maxLength={2000}
-              aria-describedby={errors.content ? "content-error" : "content-count"}
+              aria-describedby={
+                errors.content ? "content-error" : "content-count"
+              }
               {...register("content")}
             />
             <div className="flex justify-between mt-1">
               {errors.content ? (
-                <p id="content-error" className="text-xs text-destructive" role="alert">
+                <p
+                  id="content-error"
+                  className="text-xs text-destructive"
+                  role="alert"
+                >
                   {errors.content.message}
                 </p>
               ) : (
@@ -223,7 +233,7 @@ export function JournalEntryForm() {
 
           <fieldset>
             <legend className="text-sm font-medium mb-2">
-              How are you feeling in this entry?
+              How are you feeling about your preparation?
             </legend>
             <div className="flex gap-2 flex-wrap" role="group">
               {MOOD_OPTIONS.map((opt) => (
@@ -245,7 +255,9 @@ export function JournalEntryForm() {
                     }
                   `}
                 >
-                  <span className="text-xl" aria-hidden="true">{opt.emoji}</span>
+                  <span className="text-xl" aria-hidden="true">
+                    {opt.emoji}
+                  </span>
                   <span className="text-xs">{opt.label}</span>
                 </button>
               ))}
@@ -253,16 +265,21 @@ export function JournalEntryForm() {
           </fieldset>
 
           <div>
-            <p className="text-sm font-medium mb-2" id="journal-triggers-label">
-              Related Stressors{" "}
-              <span className="text-muted-foreground font-normal">(optional)</span>
+            <p
+              className="text-sm font-medium mb-2"
+              id="journal-triggers-label"
+            >
+              Exam stressors in this entry{" "}
+              <span className="text-muted-foreground font-normal">
+                (optional)
+              </span>
             </p>
             <div
               className="flex flex-wrap gap-2"
               role="group"
               aria-labelledby="journal-triggers-label"
             >
-              {TRIGGER_CATEGORIES.map((trigger) => (
+              {EXAM_TRIGGERS.map((trigger) => (
                 <button
                   key={trigger}
                   type="button"
@@ -278,7 +295,7 @@ export function JournalEntryForm() {
                     }
                   `}
                 >
-                  {TRIGGER_LABELS[trigger]}
+                  {EXAM_TRIGGER_LABELS[trigger]}
                 </button>
               ))}
             </div>
@@ -287,11 +304,14 @@ export function JournalEntryForm() {
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <Loader2
+                  className="h-4 w-4 animate-spin"
+                  aria-hidden="true"
+                />
                 <span>Saving entry...</span>
               </>
             ) : (
-              "Save Journal Entry"
+              "Save Reflection"
             )}
           </Button>
         </form>

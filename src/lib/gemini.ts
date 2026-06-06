@@ -1,17 +1,19 @@
-import type { WellnessInsight } from "@/types";
+import type { WellnessInsight, ExamContext } from "@/types";
 
-const SYSTEM_PROMPT = `You are a compassionate student wellness support assistant. Your role is to:
-1. Analyze mood patterns and stress triggers from student data
-2. Provide empathetic, actionable wellness suggestions
-3. Identify concerning patterns that may need attention
-4. Celebrate positive progress
+const EXAM_WELLNESS_SYSTEM_PROMPT = `You are a compassionate exam preparation wellness coach for competitive exam students in India. Your role is to:
+1. Analyze mood patterns and exam-specific stress triggers from student data
+2. Provide empathetic, exam-focused coping strategies and study wellness advice
+3. Identify concerning patterns that may impact exam performance or mental health
+4. Celebrate positive progress and build confidence
 
 IMPORTANT RULES:
-- Focus ONLY on student wellness support
+- Focus ONLY on exam preparation wellness support (NEET, JEE, CUET, CAT, GATE, UPSC, Board Exams, etc.)
 - Do not provide medical diagnoses
 - Do not generate code or off-topic content
-- Keep responses warm, supportive, and evidence-based
-- If urgent distress signals appear, recommend professional resources
+- Keep responses warm, supportive, and practically grounded in exam preparation reality
+- Reference specific exam contexts (e.g., syllabus, revision strategies, mock test recovery)
+- If urgent distress signals appear, recommend professional counseling resources
+- Never trivialize exam pressure — acknowledge how real and valid the stress is
 - Respond in valid JSON matching the WellnessInsight schema exactly`;
 
 interface GeminiAPIResponse {
@@ -24,24 +26,41 @@ interface GeminiAPIResponse {
 
 export function buildWellnessPrompt(
   moodSummary: string,
-  journalSummary: string
+  journalSummary: string,
+  examContext?: ExamContext | null
 ): string {
-  return `${SYSTEM_PROMPT}
+  const examSection = examContext
+    ? `EXAM CONTEXT:
+Exam: ${examContext.examType}
+Days until exam: ${examContext.daysUntilExam}
+${examContext.daysUntilExam <= 7 ? "⚠ CRITICAL: Exam is within one week — tailor advice for final stretch preparation." : ""}
+${examContext.daysUntilExam <= 30 ? "Note: Student is in the high-pressure final month of preparation." : ""}
+`
+    : "EXAM CONTEXT: Not specified (provide general exam preparation wellness advice).\n";
 
-Analyze this student wellness data and respond with a JSON object:
+  return `${EXAM_WELLNESS_SYSTEM_PROMPT}
 
-MOOD DATA:
+Analyze this student's exam preparation wellness data and respond with a JSON object:
+
+${examSection}
+MOOD DATA (last 7 days):
 ${moodSummary}
 
 JOURNAL SUMMARY:
 ${journalSummary}
 
-Respond with this exact JSON structure:
+Generate exam-preparation-specific insights. Examples of the kind of insights to provide:
+- "Stress increases when sleep drops below 6 hours — especially critical during revision weeks"
+- "Mock test anxiety is the dominant trigger — consider focusing on post-test reflection rather than score obsession"
+- "Confidence appears to decline before the exam — this is normal and manageable with grounding techniques"
+- "Energy dips in the afternoon suggest scheduling difficult topics for morning sessions"
+
+Respond with this exact JSON structure (no markdown, no backticks):
 {
-  "summary": "2-3 sentence empathetic overview",
-  "suggestions": ["actionable suggestion 1", "actionable suggestion 2", "actionable suggestion 3"],
-  "triggers": ["identified trigger 1", "identified trigger 2"],
-  "positives": ["positive observation 1", "positive observation 2"]
+  "summary": "2-3 sentence empathetic overview acknowledging their specific exam preparation challenges",
+  "suggestions": ["exam-specific actionable suggestion 1", "study wellness tip 2", "coping strategy 3"],
+  "triggers": ["identified exam stressor 1 with brief explanation", "identified stressor 2"],
+  "positives": ["specific positive observation about their preparation journey 1", "positive observation 2"]
 }`;
 }
 
@@ -49,13 +68,13 @@ export function buildChatPrompt(
   userMessage: string,
   context: string
 ): string {
-  return `${SYSTEM_PROMPT}
+  return `${EXAM_WELLNESS_SYSTEM_PROMPT}
 
 Student context: ${context}
 
 Student message: ${userMessage}
 
-Respond as a supportive wellness assistant. Keep response under 150 words. Be warm and practical.`;
+Respond as a supportive exam preparation wellness coach. Keep response under 150 words. Be warm, practical, and specific to their exam preparation context. If they mention a specific exam (NEET/JEE/CAT/GATE/UPSC etc.), tailor advice to that exam's specific demands.`;
 }
 
 export function parseWellnessInsight(rawText: string): WellnessInsight {

@@ -8,15 +8,21 @@ import React, {
   useMemo,
   useReducer,
 } from "react";
-import type { MoodEntry, JournalEntry, ChatMessage, WellnessScore } from "@/types";
-import { calculateWellnessScore } from "@/lib/wellness";
-import { generateId } from "@/lib/wellness";
+import type {
+  MoodEntry,
+  JournalEntry,
+  ChatMessage,
+  WellnessScore,
+  ExamContext,
+} from "@/types";
+import { calculateWellnessScore, generateId } from "@/lib/wellness";
 
 interface WellnessState {
   moodEntries: MoodEntry[];
   journalEntries: JournalEntry[];
   chatHistory: ChatMessage[];
   wellnessScore: WellnessScore | null;
+  examContext: ExamContext | null;
   isLoaded: boolean;
 }
 
@@ -25,6 +31,8 @@ type WellnessAction =
   | { type: "ADD_JOURNAL_ENTRY"; payload: JournalEntry }
   | { type: "ADD_CHAT_MESSAGE"; payload: ChatMessage }
   | { type: "UPDATE_WELLNESS_SCORE"; payload: WellnessScore }
+  | { type: "SET_EXAM_CONTEXT"; payload: ExamContext }
+  | { type: "CLEAR_EXAM_CONTEXT" }
   | { type: "HYDRATE"; payload: Omit<WellnessState, "isLoaded"> }
   | { type: "CLEAR_CHAT" };
 
@@ -33,6 +41,8 @@ interface WellnessContextValue {
   addMoodEntry: (entry: Omit<MoodEntry, "id" | "timestamp">) => void;
   addJournalEntry: (entry: Omit<JournalEntry, "id" | "timestamp">) => void;
   addChatMessage: (message: Omit<ChatMessage, "timestamp">) => void;
+  setExamContext: (ctx: ExamContext) => void;
+  clearExamContext: () => void;
   clearChat: () => void;
 }
 
@@ -43,6 +53,7 @@ const initialState: WellnessState = {
   journalEntries: [],
   chatHistory: [],
   wellnessScore: null,
+  examContext: null,
   isLoaded: false,
 };
 
@@ -53,18 +64,12 @@ function wellnessReducer(
   switch (action.type) {
     case "ADD_MOOD_ENTRY": {
       const moodEntries = [action.payload, ...state.moodEntries].slice(0, 90);
-      const wellnessScore = calculateWellnessScore(
-        moodEntries,
-        state.journalEntries
-      );
+      const wellnessScore = calculateWellnessScore(moodEntries, state.journalEntries);
       return { ...state, moodEntries, wellnessScore };
     }
     case "ADD_JOURNAL_ENTRY": {
       const journalEntries = [action.payload, ...state.journalEntries].slice(0, 50);
-      const wellnessScore = calculateWellnessScore(
-        state.moodEntries,
-        journalEntries
-      );
+      const wellnessScore = calculateWellnessScore(state.moodEntries, journalEntries);
       return { ...state, journalEntries, wellnessScore };
     }
     case "ADD_CHAT_MESSAGE": {
@@ -73,6 +78,10 @@ function wellnessReducer(
     }
     case "UPDATE_WELLNESS_SCORE":
       return { ...state, wellnessScore: action.payload };
+    case "SET_EXAM_CONTEXT":
+      return { ...state, examContext: action.payload };
+    case "CLEAR_EXAM_CONTEXT":
+      return { ...state, examContext: null };
     case "HYDRATE":
       return {
         ...action.payload,
@@ -109,7 +118,13 @@ export function WellnessProvider({ children }: { children: React.ReactNode }) {
     }
     dispatch({
       type: "HYDRATE",
-      payload: { moodEntries: [], journalEntries: [], chatHistory: [], wellnessScore: null },
+      payload: {
+        moodEntries: [],
+        journalEntries: [],
+        chatHistory: [],
+        wellnessScore: null,
+        examContext: null,
+      },
     });
   }, []);
 
@@ -121,6 +136,7 @@ export function WellnessProvider({ children }: { children: React.ReactNode }) {
         journalEntries: state.journalEntries,
         chatHistory: state.chatHistory,
         wellnessScore: state.wellnessScore,
+        examContext: state.examContext,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
     } catch {
@@ -132,7 +148,11 @@ export function WellnessProvider({ children }: { children: React.ReactNode }) {
     (entry: Omit<MoodEntry, "id" | "timestamp">) => {
       dispatch({
         type: "ADD_MOOD_ENTRY",
-        payload: { ...entry, id: generateId(), timestamp: new Date().toISOString() },
+        payload: {
+          ...entry,
+          id: generateId(),
+          timestamp: new Date().toISOString(),
+        },
       });
     },
     []
@@ -142,7 +162,11 @@ export function WellnessProvider({ children }: { children: React.ReactNode }) {
     (entry: Omit<JournalEntry, "id" | "timestamp">) => {
       dispatch({
         type: "ADD_JOURNAL_ENTRY",
-        payload: { ...entry, id: generateId(), timestamp: new Date().toISOString() },
+        payload: {
+          ...entry,
+          id: generateId(),
+          timestamp: new Date().toISOString(),
+        },
       });
     },
     []
@@ -158,11 +182,35 @@ export function WellnessProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const setExamContext = useCallback((ctx: ExamContext) => {
+    dispatch({ type: "SET_EXAM_CONTEXT", payload: ctx });
+  }, []);
+
+  const clearExamContext = useCallback(() => {
+    dispatch({ type: "CLEAR_EXAM_CONTEXT" });
+  }, []);
+
   const clearChat = useCallback(() => dispatch({ type: "CLEAR_CHAT" }), []);
 
   const value = useMemo(
-    () => ({ state, addMoodEntry, addJournalEntry, addChatMessage, clearChat }),
-    [state, addMoodEntry, addJournalEntry, addChatMessage, clearChat]
+    () => ({
+      state,
+      addMoodEntry,
+      addJournalEntry,
+      addChatMessage,
+      setExamContext,
+      clearExamContext,
+      clearChat,
+    }),
+    [
+      state,
+      addMoodEntry,
+      addJournalEntry,
+      addChatMessage,
+      setExamContext,
+      clearExamContext,
+      clearChat,
+    ]
   );
 
   return (
@@ -180,7 +228,9 @@ export function useWellnessStore(): WellnessContextValue {
   return ctx;
 }
 
-function isValidStoredState(value: unknown): value is Omit<WellnessState, "isLoaded"> {
+function isValidStoredState(
+  value: unknown
+): value is Omit<WellnessState, "isLoaded"> {
   if (typeof value !== "object" || value === null) return false;
   const obj = value as Record<string, unknown>;
   return (

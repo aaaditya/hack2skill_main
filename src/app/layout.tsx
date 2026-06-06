@@ -16,10 +16,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MindfulU — Student Wellness Companion",
+  title: "MindfulU — Exam Preparation Wellness",
   description:
-    "Track your mood, reflect on emotions, identify stress triggers, and receive personalized wellness support powered by AI.",
-  keywords: ["student wellness", "mental health", "mood tracking", "stress management"],
+    "Track mood, manage exam anxiety, and receive personalized AI-powered wellness support for NEET, JEE, CUET, CAT, GATE, UPSC and other competitive exam students.",
+  keywords: ["exam wellness", "student mental health", "NEET preparation", "JEE stress", "exam anxiety", "competitive exam support"],
 };
 
 export default function RootLayout({

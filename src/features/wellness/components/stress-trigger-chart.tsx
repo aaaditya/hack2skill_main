@@ -9,37 +9,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { StressTriggerCategory } from "@/types";
+import {
+  EXAM_TRIGGER_LABELS,
+  EXAM_TRIGGER_COLORS,
+} from "@/lib/wellness";
+import type { ExamStressTrigger } from "@/types";
 import { BarChart3 } from "lucide-react";
-
-const TRIGGER_COLORS: Record<StressTriggerCategory, { bg: string; text: string; bar: string }> = {
-  academic: { bg: "bg-blue-100", text: "text-blue-800", bar: "bg-blue-500" },
-  social: { bg: "bg-purple-100", text: "text-purple-800", bar: "bg-purple-500" },
-  financial: { bg: "bg-yellow-100", text: "text-yellow-800", bar: "bg-yellow-500" },
-  health: { bg: "bg-red-100", text: "text-red-800", bar: "bg-red-500" },
-  family: { bg: "bg-green-100", text: "text-green-800", bar: "bg-green-500" },
-  other: { bg: "bg-gray-100", text: "text-gray-800", bar: "bg-gray-400" },
-};
 
 export function StressTriggerChart() {
   const { state } = useWellnessStore();
 
   const triggerCounts = useMemo(() => {
-    const counts: Partial<Record<StressTriggerCategory, number>> = {};
-    const allEntries = [
-      ...state.moodEntries,
-      ...state.journalEntries,
-    ];
+    const counts: Partial<Record<ExamStressTrigger, number>> = {};
+    const allEntries = [...state.moodEntries, ...state.journalEntries];
 
     for (const entry of allEntries) {
       for (const trigger of entry.triggers) {
-        counts[trigger] = (counts[trigger] ?? 0) + 1;
+        counts[trigger as ExamStressTrigger] =
+          (counts[trigger as ExamStressTrigger] ?? 0) + 1;
       }
     }
 
     return Object.entries(counts)
       .sort(([, a], [, b]) => b - a)
-      .filter(([, count]) => count > 0) as [StressTriggerCategory, number][];
+      .filter(([, count]) => count > 0) as [ExamStressTrigger, number][];
   }, [state.moodEntries, state.journalEntries]);
 
   const maxCount = triggerCounts[0]?.[1] ?? 1;
@@ -50,15 +43,16 @@ export function StressTriggerChart() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" aria-hidden="true" />
-            Stress Triggers
+            Exam Stress Triggers
           </CardTitle>
           <CardDescription>
-            Track what&apos;s affecting your mood most frequently.
+            Track which exam pressures affect you most frequently.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-4">
-            No triggers recorded yet. Select triggers in your mood check-ins.
+            No triggers recorded yet. Tag triggers in your mood check-ins and
+            journal entries to see patterns.
           </p>
         </CardContent>
       </Card>
@@ -70,19 +64,16 @@ export function StressTriggerChart() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BarChart3 className="h-5 w-5" aria-hidden="true" />
-          Stress Triggers
+          Exam Stress Triggers
         </CardTitle>
         <CardDescription>
-          Most frequent stressors across all your entries
+          Most frequent exam pressures across all your entries
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ol
-          className="space-y-3"
-          aria-label="Stress trigger frequency chart"
-        >
+        <ol className="space-y-3" aria-label="Exam stress trigger frequency chart">
           {triggerCounts.map(([trigger, count]) => {
-            const colors = TRIGGER_COLORS[trigger];
+            const colors = EXAM_TRIGGER_COLORS[trigger];
             const percentage = Math.round((count / maxCount) * 100);
             return (
               <li key={trigger} className="space-y-1">
@@ -90,7 +81,7 @@ export function StressTriggerChart() {
                   <span
                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors.bg} ${colors.text}`}
                   >
-                    {trigger.charAt(0).toUpperCase() + trigger.slice(1)}
+                    {EXAM_TRIGGER_LABELS[trigger]}
                   </span>
                   <span
                     className="text-xs text-muted-foreground"
@@ -102,7 +93,7 @@ export function StressTriggerChart() {
                 <div
                   className="h-2 w-full rounded-full bg-muted overflow-hidden"
                   role="progressbar"
-                  aria-label={`${trigger}: ${count} occurrences`}
+                  aria-label={`${EXAM_TRIGGER_LABELS[trigger]}: ${count} occurrences`}
                   aria-valuenow={percentage}
                   aria-valuemin={0}
                   aria-valuemax={100}

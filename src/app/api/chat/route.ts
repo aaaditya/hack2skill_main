@@ -39,14 +39,21 @@ export async function POST(request: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+    const triggerLabels = (context?.recentTriggers ?? [])
+      .map((t) => t.replace(/_/g, " "))
+      .join(", ");
+
+    const examInfo = context?.examType
+      ? ` Preparing for: ${context.examType}.${context.daysUntilExam !== undefined ? ` Days until exam: ${context.daysUntilExam}.` : ""}`
+      : "";
+
     const contextStr = context
-      ? `Recent mood: ${context.recentMoodLevel ?? "unknown"}/5. Triggers: ${(context.recentTriggers ?? []).join(", ") || "none"}.`
+      ? `Recent mood: ${context.recentMoodLevel ?? "unknown"}/5. Exam stressors: ${triggerLabels || "none"}.${examInfo}`
       : "No additional context available.";
 
     const prompt = buildChatPrompt(message, contextStr);
     const result = await model.generateContent(prompt);
     const reply = result.response.text();
-
     const sanitizedReply = reply.replace(/<[^>]*>/g, "").slice(0, 1000);
 
     return NextResponse.json({ reply: sanitizedReply }, { status: 200 });

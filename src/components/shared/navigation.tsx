@@ -9,8 +9,8 @@ const NAV_ITEMS = [
   { href: "/", label: "Home" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/mood", label: "Mood Check-in" },
-  { href: "/journal", label: "Journal" },
-  { href: "/chat", label: "Wellness Chat" },
+  { href: "/journal", label: "Reflection" },
+  { href: "/chat", label: "Exam Coach" },
 ] as const;
 
 export function Navigation() {

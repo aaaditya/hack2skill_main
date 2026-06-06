@@ -69,9 +69,14 @@ export function WellnessChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<ChatInputForm>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ChatInputForm>({
     resolver: zodResolver(ChatInputSchema),
   });
 
@@ -84,16 +89,18 @@ export function WellnessChat() {
     return {
       recentMoodLevel: recent?.moodLevel,
       recentTriggers: recent?.triggers,
+      examType: state.examContext?.examType,
+      daysUntilExam: state.examContext?.daysUntilExam,
     };
-  }, [state.moodEntries]);
+  }, [state.moodEntries, state.examContext]);
 
   const onSubmit = useCallback(
     async (data: ChatInputForm) => {
       setError(null);
       addChatMessage({ role: "user", content: data.message });
       reset();
-
       setIsLoading(true);
+
       try {
         const response = await fetch("/api/chat", {
           method: "POST",
@@ -111,12 +118,10 @@ export function WellnessChat() {
           );
         }
 
-        const result = await response.json() as { reply: string };
+        const result = (await response.json()) as { reply: string };
         addChatMessage({ role: "assistant", content: result.reply });
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Something went wrong."
-        );
+        setError(err instanceof Error ? err.message : "Something went wrong.");
       } finally {
         setIsLoading(false);
         setTimeout(() => inputRef.current?.focus(), 100);
@@ -125,13 +130,22 @@ export function WellnessChat() {
     [addChatMessage, getContext, reset]
   );
 
+  const examLabel = state.examContext?.examType ?? "exam";
+
+  const SUGGESTIONS = [
+    `I'm anxious about my ${examLabel} performance`,
+    "How do I recover from a bad mock test score?",
+    "My syllabus backlog is overwhelming me",
+    "How do I manage study stress and sleep better?",
+  ];
+
   return (
     <Card className="flex flex-col h-[600px]">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5" aria-hidden="true" />
-            Wellness Chat
+            Exam Prep Coach
           </CardTitle>
           {state.chatHistory.length > 0 && (
             <Button
@@ -146,7 +160,9 @@ export function WellnessChat() {
           )}
         </div>
         <CardDescription>
-          Talk to your AI wellness companion. Share what&apos;s on your mind.
+          {state.examContext
+            ? `Your ${examLabel} preparation coach — ask about study strategies, coping with pressure, or anything on your mind.`
+            : "Your exam preparation wellness coach — talk about study stress, anxiety, or coping strategies."}
         </CardDescription>
       </CardHeader>
 
@@ -160,27 +176,26 @@ export function WellnessChat() {
         >
           {state.chatHistory.length === 0 && !isLoading && (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-              <Bot className="h-12 w-12 text-muted-foreground/40" aria-hidden="true" />
+              <Bot
+                className="h-12 w-12 text-muted-foreground/40"
+                aria-hidden="true"
+              />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  Hi! I&apos;m your wellness companion.
+                  Hi! I&apos;m your exam preparation wellness coach.
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Share how you&apos;re feeling, ask for coping strategies, or just talk.
+                  Share what&apos;s stressing you about{" "}
+                  {state.examContext ? `your ${examLabel} prep` : "your exams"}.
+                  I&apos;ll help you manage it.
                 </p>
               </div>
               <div className="flex flex-col gap-1 w-full max-w-xs">
-                {[
-                  "I'm feeling overwhelmed with exams",
-                  "How can I manage academic stress?",
-                  "I haven't been sleeping well",
-                ].map((suggestion) => (
+                {SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
                     type="button"
-                    onClick={() => {
-                      void onSubmit({ message: suggestion });
-                    }}
+                    onClick={() => void onSubmit({ message: suggestion })}
                     className="text-xs text-left rounded-md border border-border px-3 py-2 hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {suggestion}
@@ -195,12 +210,19 @@ export function WellnessChat() {
           ))}
 
           {isLoading && (
-            <div className="flex gap-2 max-w-[85%] self-start" aria-live="polite" aria-label="Assistant is thinking">
+            <div
+              className="flex gap-2 max-w-[85%] self-start"
+              aria-live="polite"
+              aria-label="Assistant is thinking"
+            >
               <div className="shrink-0 h-7 w-7 rounded-full flex items-center justify-center bg-primary/10">
                 <Bot className="h-4 w-4 text-primary" aria-hidden="true" />
               </div>
               <div className="rounded-2xl rounded-tl-sm bg-muted px-3 py-2">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden="true" />
+                <Loader2
+                  className="h-4 w-4 animate-spin text-muted-foreground"
+                  aria-hidden="true"
+                />
               </div>
             </div>
           )}
@@ -209,7 +231,11 @@ export function WellnessChat() {
         </div>
 
         {error && (
-          <p className="text-xs text-destructive" role="alert" aria-live="assertive">
+          <p
+            className="text-xs text-destructive"
+            role="alert"
+            aria-live="assertive"
+          >
             {error}
           </p>
         )}
@@ -223,9 +249,13 @@ export function WellnessChat() {
             {...register("message")}
             ref={(e) => {
               register("message").ref(e);
-              (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = e;
+              inputRef.current = e;
             }}
-            placeholder="Type a message..."
+            placeholder={
+              state.examContext
+                ? `Ask about your ${examLabel} preparation...`
+                : "Ask about managing exam stress..."
+            }
             disabled={isLoading}
             maxLength={1000}
             aria-label="Chat message"
@@ -240,14 +270,21 @@ export function WellnessChat() {
             aria-label="Send message"
           >
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <Loader2
+                className="h-4 w-4 animate-spin"
+                aria-hidden="true"
+              />
             ) : (
               <Send className="h-4 w-4" aria-hidden="true" />
             )}
           </Button>
         </form>
         {errors.message && (
-          <p id="chat-error" className="text-xs text-destructive" role="alert">
+          <p
+            id="chat-error"
+            className="text-xs text-destructive"
+            role="alert"
+          >
             {errors.message.message}
           </p>
         )}

@@ -3,6 +3,7 @@ import {
   JournalEntrySchema,
   ChatMessageSchema,
   WellnessInsightRequestSchema,
+  ExamContextSchema,
 } from "@/lib/validations";
 
 describe("MoodEntrySchema", () => {
@@ -11,7 +12,7 @@ describe("MoodEntrySchema", () => {
     energyLevel: 4 as const,
     anxietyLevel: 2 as const,
     notes: "Feeling okay today",
-    triggers: ["academic"] as const,
+    triggers: ["mock_test_performance"] as const,
   };
 
   it("accepts a valid mood entry", () => {
@@ -52,10 +53,20 @@ describe("MoodEntrySchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects more than 6 triggers", () => {
+  it("rejects more than 8 exam triggers", () => {
     const entry = {
       ...validMoodEntry,
-      triggers: ["academic", "social", "financial", "health", "family", "other", "academic"],
+      triggers: [
+        "mock_test_performance",
+        "syllabus_backlog",
+        "revision_pressure",
+        "parent_expectations",
+        "peer_comparison",
+        "results_anxiety",
+        "time_management",
+        "career_uncertainty",
+        "mock_test_performance",
+      ],
     };
     const result = MoodEntrySchema.safeParse(entry);
     expect(result.success).toBe(false);
@@ -72,12 +83,44 @@ describe("MoodEntrySchema", () => {
     const result = MoodEntrySchema.safeParse(entry);
     expect(result.success).toBe(false);
   });
+
+  it("accepts all valid exam trigger types", () => {
+    const allTriggers = [
+      "mock_test_performance",
+      "syllabus_backlog",
+      "revision_pressure",
+      "parent_expectations",
+      "peer_comparison",
+      "results_anxiety",
+      "time_management",
+      "career_uncertainty",
+    ] as const;
+
+    for (const trigger of allTriggers) {
+      const result = MoodEntrySchema.safeParse({
+        ...validMoodEntry,
+        triggers: [trigger],
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects old generic trigger categories", () => {
+    const oldTriggers = ["academic", "social", "financial", "health", "family"];
+    for (const trigger of oldTriggers) {
+      const result = MoodEntrySchema.safeParse({
+        ...validMoodEntry,
+        triggers: [trigger],
+      });
+      expect(result.success).toBe(false);
+    }
+  });
 });
 
 describe("JournalEntrySchema", () => {
   const validEntry = {
-    title: "Tough day",
-    content: "Today was challenging but I persevered.",
+    title: "Post mock test reflection",
+    content: "Today was challenging but I persevered through the revision.",
     mood: 3 as const,
     triggers: [] as const,
   };
@@ -88,12 +131,16 @@ describe("JournalEntrySchema", () => {
   });
 
   it("trims title and content", () => {
-    const entry = { ...validEntry, title: "  Hello  ", content: "  Some content  " };
+    const entry = {
+      ...validEntry,
+      title: "  Hello  ",
+      content: "  Some content here for testing  ",
+    };
     const result = JournalEntrySchema.safeParse(entry);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.title).toBe("Hello");
-      expect(result.data.content).toBe("Some content");
+      expect(result.data.content).toBe("Some content here for testing");
     }
   });
 
@@ -120,12 +167,79 @@ describe("JournalEntrySchema", () => {
     const result = JournalEntrySchema.safeParse(entry);
     expect(result.success).toBe(false);
   });
+
+  it("accepts exam-specific triggers", () => {
+    const entry = {
+      ...validEntry,
+      triggers: ["revision_pressure", "results_anxiety"] as const,
+    };
+    const result = JournalEntrySchema.safeParse(entry);
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("ExamContextSchema", () => {
+  it("accepts a valid exam context", () => {
+    const result = ExamContextSchema.safeParse({
+      examType: "NEET",
+      daysUntilExam: 90,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts all valid exam types", () => {
+    const examTypes = ["NEET", "JEE", "CUET", "CAT", "GATE", "UPSC", "Board Exams", "Other"];
+    for (const examType of examTypes) {
+      const result = ExamContextSchema.safeParse({ examType, daysUntilExam: 30 });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("accepts 0 days until exam (exam day)", () => {
+    const result = ExamContextSchema.safeParse({
+      examType: "JEE",
+      daysUntilExam: 0,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects negative days", () => {
+    const result = ExamContextSchema.safeParse({
+      examType: "NEET",
+      daysUntilExam: -1,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects days beyond 730", () => {
+    const result = ExamContextSchema.safeParse({
+      examType: "UPSC",
+      daysUntilExam: 731,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid exam type", () => {
+    const result = ExamContextSchema.safeParse({
+      examType: "SAT",
+      daysUntilExam: 60,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects non-integer days", () => {
+    const result = ExamContextSchema.safeParse({
+      examType: "CAT",
+      daysUntilExam: 30.5,
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("ChatMessageSchema", () => {
   it("accepts a valid message", () => {
     const result = ChatMessageSchema.safeParse({
-      message: "How can I manage stress better?",
+      message: "How can I manage mock test anxiety?",
     });
     expect(result.success).toBe(true);
   });
@@ -163,10 +277,15 @@ describe("ChatMessageSchema", () => {
     }
   });
 
-  it("accepts optional context", () => {
+  it("accepts optional exam context", () => {
     const result = ChatMessageSchema.safeParse({
-      message: "I feel stressed",
-      context: { recentMoodLevel: 2, recentTriggers: ["academic"] },
+      message: "I failed my mock test again",
+      context: {
+        recentMoodLevel: 2,
+        recentTriggers: ["mock_test_performance"],
+        examType: "NEET",
+        daysUntilExam: 45,
+      },
     });
     expect(result.success).toBe(true);
   });
@@ -177,6 +296,24 @@ describe("WellnessInsightRequestSchema", () => {
     const result = WellnessInsightRequestSchema.safeParse({
       moodEntries: [],
       journalEntries: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts exam context", () => {
+    const result = WellnessInsightRequestSchema.safeParse({
+      moodEntries: [],
+      journalEntries: [],
+      examContext: { examType: "JEE", daysUntilExam: 60 },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null exam context", () => {
+    const result = WellnessInsightRequestSchema.safeParse({
+      moodEntries: [],
+      journalEntries: [],
+      examContext: null,
     });
     expect(result.success).toBe(true);
   });

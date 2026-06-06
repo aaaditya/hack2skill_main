@@ -8,14 +8,36 @@ export const MoodLevelSchema = z.union([
   z.literal(5),
 ]);
 
-export const StressTriggerCategorySchema = z.enum([
-  "academic",
-  "social",
-  "financial",
-  "health",
-  "family",
-  "other",
+export const ExamTypeSchema = z.enum([
+  "NEET",
+  "JEE",
+  "CUET",
+  "CAT",
+  "GATE",
+  "UPSC",
+  "Board Exams",
+  "Other",
 ]);
+
+export const ExamStressTriggerSchema = z.enum([
+  "mock_test_performance",
+  "syllabus_backlog",
+  "revision_pressure",
+  "parent_expectations",
+  "peer_comparison",
+  "results_anxiety",
+  "time_management",
+  "career_uncertainty",
+]);
+
+export const ExamContextSchema = z.object({
+  examType: ExamTypeSchema,
+  daysUntilExam: z
+    .number()
+    .int("Must be a whole number")
+    .min(0, "Days cannot be negative")
+    .max(730, "Must be within 2 years"),
+});
 
 const MAX_NOTES_LENGTH = 500;
 const MAX_TITLE_LENGTH = 100;
@@ -31,8 +53,8 @@ export const MoodEntrySchema = z.object({
     .max(MAX_NOTES_LENGTH, `Notes must be under ${MAX_NOTES_LENGTH} characters`)
     .transform((val) => val.trim()),
   triggers: z
-    .array(StressTriggerCategorySchema)
-    .max(6, "Select at most 6 triggers"),
+    .array(ExamStressTriggerSchema)
+    .max(8, "Select at most 8 triggers"),
 });
 
 export const JournalEntrySchema = z.object({
@@ -51,8 +73,8 @@ export const JournalEntrySchema = z.object({
     .transform((val) => val.trim()),
   mood: MoodLevelSchema,
   triggers: z
-    .array(StressTriggerCategorySchema)
-    .max(6, "Select at most 6 triggers"),
+    .array(ExamStressTriggerSchema)
+    .max(8, "Select at most 8 triggers"),
 });
 
 export const ChatMessageSchema = z.object({
@@ -71,7 +93,9 @@ export const ChatMessageSchema = z.object({
   context: z
     .object({
       recentMoodLevel: MoodLevelSchema.optional(),
-      recentTriggers: z.array(StressTriggerCategorySchema).optional(),
+      recentTriggers: z.array(ExamStressTriggerSchema).optional(),
+      examType: ExamTypeSchema.optional(),
+      daysUntilExam: z.number().int().min(0).max(730).optional(),
     })
     .optional(),
 });
@@ -84,7 +108,7 @@ export const WellnessInsightRequestSchema = z.object({
         energyLevel: MoodLevelSchema,
         anxietyLevel: MoodLevelSchema,
         notes: z.string().max(MAX_NOTES_LENGTH),
-        triggers: z.array(StressTriggerCategorySchema),
+        triggers: z.array(ExamStressTriggerSchema),
         timestamp: z.string(),
       })
     )
@@ -95,14 +119,16 @@ export const WellnessInsightRequestSchema = z.object({
         title: z.string().max(MAX_TITLE_LENGTH),
         content: z.string().max(MAX_CONTENT_LENGTH),
         mood: MoodLevelSchema,
-        triggers: z.array(StressTriggerCategorySchema),
+        triggers: z.array(ExamStressTriggerSchema),
         timestamp: z.string(),
       })
     )
     .max(10),
+  examContext: ExamContextSchema.nullable().optional(),
 });
 
 export type MoodEntryInput = z.infer<typeof MoodEntrySchema>;
 export type JournalEntryInput = z.infer<typeof JournalEntrySchema>;
 export type ChatMessageInput = z.infer<typeof ChatMessageSchema>;
 export type WellnessInsightRequest = z.infer<typeof WellnessInsightRequestSchema>;
+export type ExamContextInput = z.infer<typeof ExamContextSchema>;
